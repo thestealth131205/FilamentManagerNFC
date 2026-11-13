@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 
 /**
  * Wiederverwendbares Dropdown mit Live-Suche für Stammdaten mit vielen möglichen
@@ -69,6 +70,11 @@ fun SearchableDropdown(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
+            // Standard-DropdownMenu ist per Default fokussierbar (für Kontextmenüs
+            // gedacht) – das reißt bei jedem Tastendruck den Fokus vom TextField weg
+            // und schließt die Tastatur. Hier muss das Popup unfokussiert bleiben,
+            // damit das Eingabefeld die Tastatur behält.
+            properties = PopupProperties(focusable = false),
         ) {
             // DropdownMenu stellt bereits eine eigene scrollbare Column bereit –
             // ein zusätzliches LazyColumn hier führt zu
