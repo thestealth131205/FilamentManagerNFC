@@ -13,6 +13,7 @@
 
     <string name="editor_title_new">Neue Spule</string>
     <string name="editor_title_edit">Spule bearbeiten</string>
+    <string name="editor_required_hint">* Pflichtfeld (Hersteller, Typ, Farbe)</string>
     <string name="editor_section_basic">Basisdaten</string>
     <string name="editor_section_temps">Temperaturen</string>
     <string name="editor_section_advanced">Erweiterte Daten (Slicer, Einkauf)</string>
@@ -44,12 +45,50 @@
     <string name="dropdown_no_results">Keine Treffer</string>
 
     <string name="nfc_title">NFC lesen/schreiben</string>
-    <string name="nfc_placeholder">NFC-Lesen/Schreiben für ACE-2-Pro-Tags folgt in den nächsten Schritten (PLAN.md, Schritt 3/4).</string>
+    <string name="nfc_tab_read">Lesen</string>
+    <string name="nfc_tab_write">Schreiben</string>
+    <string name="nfc_cancel">Abbrechen</string>
+    <string name="nfc_ok">OK</string>
+    <string name="nfc_waiting_hold_tag">Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_waiting_write">Schreibe „%1$s“ – Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_read_intro">Lies einen NFC-Tag aus, um die Daten einer Spule zu übernehmen oder mit einer vorhandenen SKU abzugleichen.</string>
+    <string name="nfc_read_start">Tag lesen</string>
+    <string name="nfc_read_again">Erneut lesen</string>
+    <string name="nfc_read_empty_title">Tag ist leer</string>
+    <string name="nfc_read_empty_body">Der aufgelegte Tag (UID %1$s) enthält noch keine Filament-Daten. Wechsle zum Reiter „Schreiben“, um ihn zu beschreiben.</string>
+    <string name="nfc_read_result_title">Vom Tag gelesen</string>
+    <string name="nfc_read_result_unknown">Unbekannte Spule</string>
+    <string name="nfc_read_result_matched">Die SKU stimmt mit einer vorhandenen Spule in der Datenbank überein.</string>
+    <string name="nfc_read_result_new">Keine passende Spule in der Datenbank gefunden – wird als neuer Entwurf angelegt.</string>
+    <string name="nfc_read_apply">In Datenbank übernehmen</string>
+    <string name="nfc_label_extruder">Extruder</string>
+    <string name="nfc_label_bed">Druckbett</string>
+    <string name="nfc_label_diameter">Durchmesser</string>
+    <string name="nfc_label_length">Länge</string>
+    <string name="nfc_label_weight">Gewicht</string>
+    <string name="nfc_write_intro">Spule auswählen, deren Daten auf den Tag geschrieben werden sollen.</string>
+    <string name="nfc_write_no_filaments">Noch keine Spulen angelegt – lege zuerst eine Spule an.</string>
+    <string name="nfc_write_success_title">Erfolgreich geschrieben</string>
+    <string name="nfc_write_success_body">Tag (UID %1$s) wurde beschrieben und per Lesevergleich verifiziert.</string>
+    <string name="nfc_error_title">Fehler</string>
 
     <string name="scan_title">Etikett scannen</string>
-    <string name="scan_placeholder">Kamera-Scan (Barcode + OCR) folgt als letzter Schritt (PLAN.md, Schritt 5).</string>
+    <string name="scan_permission_missing">Für den Kamera-Scan wird die Kamera-Berechtigung benötigt.</string>
+    <string name="scan_permission_request">Berechtigung erteilen</string>
+    <string name="scan_hint">Etikett mittig im Bild platzieren und fotografieren.</string>
+    <string name="scan_capture">Foto aufnehmen</string>
+    <string name="scan_error">Etikett konnte nicht gelesen werden. Bitte erneut versuchen oder Daten manuell eingeben.</string>
 
     <string name="info_developer">Entwickler: Dennis Bassy</string>
     <string name="info_website">letheapp.de</string>
     <string name="info_repo">GitHub-Repo</string>
+
+    <string name="onboarding_title">Berechtigungen</string>
+    <string name="onboarding_intro">Damit Filament Manager NFC richtig funktioniert, benötigt die App Zugriff auf Kamera und NFC. Hier kurz, wofür:</string>
+    <string name="onboarding_camera_title">Kamera</string>
+    <string name="onboarding_camera_desc">Wird verwendet, um das Etikett auf einer Filamentspule zu fotografieren und Material, Farbe und Temperaturen automatisch als Vorschlag zu erkennen.</string>
+    <string name="onboarding_nfc_title">NFC</string>
+    <string name="onboarding_nfc_desc">Wird verwendet, um die Daten einer Spule auf einen NFC-Tag (kompatibel zum Anycubic ACE 2 Pro) zu schreiben bzw. von einem Tag zu lesen. Diese Berechtigung wird automatisch bei der Installation erteilt, keine weitere Abfrage nötig.</string>
+    <string name="onboarding_nfc_desc_missing">Dieses Gerät hat laut Erkennung kein NFC – Lesen/Schreiben von Tags ist dann nicht möglich, die restlichen Funktionen (Datenbank, Etikett-Scan) funktionieren trotzdem.</string>
+    <string name="onboarding_continue">Berechtigungen erteilen und weiter</string>
 </resources>

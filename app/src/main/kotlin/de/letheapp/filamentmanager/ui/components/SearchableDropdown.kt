@@ -38,6 +38,7 @@ fun SearchableDropdown(
     allEntriesAlpha: List<String>,
     onValueSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
+    isError: Boolean = false,
 ) {
     var expanded by remember { mutableStateOf(false) }
     var query by remember(value) { mutableStateOf(value) }
@@ -66,6 +67,7 @@ fun SearchableDropdown(
             },
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            isError = isError,
             modifier = Modifier.menuAnchor(),
         )
         DropdownMenu(

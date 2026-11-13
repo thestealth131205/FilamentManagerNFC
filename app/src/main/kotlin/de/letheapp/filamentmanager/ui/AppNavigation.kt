@@ -31,6 +31,7 @@ import de.letheapp.filamentmanager.ui.info.InfoScreen
 import de.letheapp.filamentmanager.ui.list.FilamentListScreen
 import de.letheapp.filamentmanager.ui.list.FilamentListViewModel
 import de.letheapp.filamentmanager.ui.nfc.NfcScreen
+import de.letheapp.filamentmanager.ui.nfc.NfcViewModel
 import de.letheapp.filamentmanager.ui.scan.ScanScreen
 
 private object Routes {
@@ -111,8 +112,16 @@ fun AppNavigation(database: AppDatabase) {
                     onDeleted = { navController.popBackStack() },
                 )
             }
-            composable(Routes.SCAN) { ScanScreen() }
-            composable(Routes.NFC) { NfcScreen() }
+            composable(Routes.SCAN) {
+                ScanScreen(onScanned = { navController.navigate(Routes.editorRoute()) })
+            }
+            composable(Routes.NFC) {
+                val viewModel = remember { NfcViewModel(database) }
+                NfcScreen(
+                    viewModel = viewModel,
+                    onNavigateToEditor = { filamentId -> navController.navigate(Routes.editorRoute(filamentId)) },
+                )
+            }
             composable(Routes.INFO) { InfoScreen() }
         }
     }

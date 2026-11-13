@@ -1,11 +1,17 @@
 package de.letheapp.filamentmanager.ui.editor
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,10 +24,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.letheapp.filamentmanager.R
+import de.letheapp.filamentmanager.data.catalog.parseCatalogHex
 import de.letheapp.filamentmanager.ui.components.SearchableDropdown
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,8 +47,10 @@ fun FilamentEditorScreen(
     val manufacturerAll by viewModel.manufacturerAllAlpha.collectAsState()
     val typeTop3 by viewModel.typeTop3.collectAsState()
     val typeAll by viewModel.typeAllAlpha.collectAsState()
-    val colorTop3 by viewModel.colorTop3.collectAsState()
-    val colorAll by viewModel.colorAllAlpha.collectAsState()
+    val colorTop3 by viewModel.colorTopEntries.collectAsState()
+    val colorAll by viewModel.colorAllEntries.collectAsState()
+
+    val isValid = state.brand.isNotBlank() && state.type.isNotBlank() && state.colorName.isNotBlank()
 
     Scaffold(
         topBar = {
@@ -62,6 +74,11 @@ fun FilamentEditorScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(stringResource(R.string.editor_section_basic), style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(R.string.editor_required_hint),
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+            )
 
             OutlinedTextField(
                 value = state.sku,
@@ -70,29 +87,50 @@ fun FilamentEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             SearchableDropdown(
-                label = stringResource(R.string.editor_brand),
+                label = stringResource(R.string.editor_brand) + " *",
                 value = state.brand,
                 topEntries = manufacturerTop3,
                 allEntriesAlpha = manufacturerAll,
-                onValueSelected = { v -> viewModel.update { it.copy(brand = v) } },
+                onValueSelected = viewModel::selectBrand,
                 modifier = Modifier.fillMaxWidth(),
+                isError = state.brand.isBlank(),
             )
             SearchableDropdown(
-                label = stringResource(R.string.editor_type),
+                label = stringResource(R.string.editor_type) + " *",
                 value = state.type,
                 topEntries = typeTop3,
                 allEntriesAlpha = typeAll,
-                onValueSelected = { v -> viewModel.update { it.copy(type = v) } },
+                onValueSelected = viewModel::selectType,
                 modifier = Modifier.fillMaxWidth(),
+                isError = state.type.isBlank(),
             )
-            SearchableDropdown(
-                label = stringResource(R.string.editor_color_name),
-                value = state.colorName,
-                topEntries = colorTop3,
-                allEntriesAlpha = colorAll,
-                onValueSelected = { v -> viewModel.update { it.copy(colorName = v) } },
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
-            )
+            ) {
+                SearchableDropdown(
+                    label = stringResource(R.string.editor_color_name) + " *",
+                    value = state.colorName,
+                    topEntries = colorTop3,
+                    allEntriesAlpha = colorAll,
+                    onValueSelected = viewModel::selectColor,
+                    modifier = Modifier.weight(1f),
+                    isError = state.colorName.isBlank(),
+                )
+                val swatchColor = state.colorHex?.let { hex ->
+                    runCatching { Color(parseCatalogHex(hex)) }.getOrNull()
+                }
+                if (swatchColor != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(swatchColor)
+                            .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline, CircleShape),
+                    )
+                }
+            }
             OutlinedTextField(
                 value = state.diameterMm,
                 onValueChange = { v -> viewModel.update { it.copy(diameterMm = v) } },
@@ -202,7 +240,11 @@ fun FilamentEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Button(onClick = { viewModel.save(onSaved) }, modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { viewModel.save(onSaved) },
+                enabled = isValid,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(stringResource(R.string.editor_save))
             }
             if (isEditing) {
