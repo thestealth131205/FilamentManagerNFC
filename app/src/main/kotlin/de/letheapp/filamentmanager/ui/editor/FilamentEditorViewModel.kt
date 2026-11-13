@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.letheapp.filamentmanager.data.catalog.BrandCatalog
 import de.letheapp.filamentmanager.data.catalog.CatalogMaterial
+import de.letheapp.filamentmanager.data.catalog.SkuGenerator
 import de.letheapp.filamentmanager.data.catalog.parseCatalogHex
 import de.letheapp.filamentmanager.data.catalog.toCatalogHex
 import de.letheapp.filamentmanager.data.db.AppDatabase
@@ -109,11 +110,13 @@ class FilamentEditorViewModel(
         if (filamentId != null) {
             viewModelScope.launch {
                 dao.getById(filamentId)?.let { form.value = it.toFormState() }
+                recomputeSku()
             }
         } else {
             // Kommt der Editor direkt vom Kamera-Scan, liegt hier ein per OCR
             // vorausgefüllter Entwurf bereit (siehe ScanScreen/LabelOcrParser).
             ScanDraftHolder.consume()?.let { form.value = it }
+            recomputeSku()
         }
     }
 
@@ -125,12 +128,14 @@ class FilamentEditorViewModel(
     fun selectBrand(name: String) {
         form.value = form.value.copy(brand = name)
         applyCatalogAutofill()
+        recomputeSku()
     }
 
     /** Typ gewählt: Feld setzen und ggf. passende Katalog-Temperaturen/-Farbe nachziehen. */
     fun selectType(name: String) {
         form.value = form.value.copy(type = name)
         applyCatalogAutofill()
+        recomputeSku()
     }
 
     /** Farbe gewählt: Feld setzen, Hex-Wert aus dem Katalog übernehmen falls bekannt, sonst null. */
@@ -140,6 +145,17 @@ class FilamentEditorViewModel(
             colorName = name,
             colorHex = BrandCatalog.hexFor(state.brand, state.type, name),
         )
+        recomputeSku()
+    }
+
+    /**
+     * SKU wird nicht mehr manuell eingetippt, sondern deterministisch aus
+     * Hersteller/Typ/Farbe berechnet – gleiche Kombination ergibt immer dieselbe
+     * SKU (siehe SkuGenerator). Läuft nach jeder Änderung dieser drei Felder.
+     */
+    private fun recomputeSku() {
+        val state = form.value
+        form.value = state.copy(sku = SkuGenerator.generate(state.brand, state.type, state.colorName))
     }
 
     /**

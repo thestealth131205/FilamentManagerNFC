@@ -18,6 +18,7 @@
     <string name="editor_section_temps">Temperaturen</string>
     <string name="editor_section_advanced">Erweiterte Daten (Slicer, Einkauf)</string>
     <string name="editor_sku">SKU</string>
+    <string name="editor_sku_hint">Automatisch aus Hersteller, Typ und Farbe erzeugt</string>
     <string name="editor_brand">Hersteller</string>
     <string name="editor_type">Typ/Material</string>
     <string name="editor_color_name">Farbname</string>

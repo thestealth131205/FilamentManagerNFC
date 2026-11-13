@@ -82,8 +82,10 @@ fun FilamentEditorScreen(
 
             OutlinedTextField(
                 value = state.sku,
-                onValueChange = { v -> viewModel.update { it.copy(sku = v) } },
+                onValueChange = {},
+                readOnly = true,
                 label = { Text(stringResource(R.string.editor_sku)) },
+                supportingText = { Text(stringResource(R.string.editor_sku_hint)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             SearchableDropdown(
