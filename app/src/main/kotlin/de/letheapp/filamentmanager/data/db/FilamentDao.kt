@@ -19,6 +19,15 @@ interface FilamentDao {
     @Query("SELECT * FROM filaments WHERE sku = :sku LIMIT 1")
     suspend fun findBySku(sku: String): FilamentEntity?
 
+    // Viele Spulen haben keine SKU (nur Hersteller/Typ/Farbe sind Pflicht) – ein frisch
+    // beschriebener Tag lässt sich dann beim Lesen nicht per SKU zuordnen. Der zuletzt für
+    // diese Tag-UID geloggte Schreibvorgang ist der verlässlichere Schlüssel.
+    @Query(
+        "SELECT filamentId FROM nfc_write_log WHERE tagUid = :tagUid " +
+            "ORDER BY writtenAtEpochMs DESC LIMIT 1",
+    )
+    suspend fun findFilamentIdByTagUid(tagUid: String): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(filament: FilamentEntity): Long
 

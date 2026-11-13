@@ -58,8 +58,8 @@ class MainActivity : ComponentActivity() {
 
     // Reader-Mode statt klassischem Foreground-Dispatch: einfacherer Lifecycle,
     // läuft auf einem Binder-Thread (nicht dem UI-Thread) -> siehe NfcBridge.
-    override fun onResume() {
-        super.onResume()
+    private fun registerReaderMode() {
+        nfcAdapter?.disableReaderMode(this)
         nfcAdapter?.enableReaderMode(
             this,
             { tag -> NfcBridge.onTagDiscovered(tag) },
@@ -68,8 +68,15 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    override fun onResume() {
+        super.onResume()
+        NfcBridge.registerReaderResetCallback { registerReaderMode() }
+        registerReaderMode()
+    }
+
     override fun onPause() {
         super.onPause()
+        NfcBridge.registerReaderResetCallback(null)
         nfcAdapter?.disableReaderMode(this)
     }
 }

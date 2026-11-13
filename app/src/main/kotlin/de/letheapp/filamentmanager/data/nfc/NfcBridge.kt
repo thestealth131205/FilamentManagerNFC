@@ -33,9 +33,22 @@ object NfcBridge {
     private val _event = MutableStateFlow<NfcEvent>(NfcEvent.Idle)
     val event: StateFlow<NfcEvent> = _event
 
+    /**
+     * Von `MainActivity` gesetzt: schaltet den Reader-Mode kurz aus/ein. Nötig, weil Android
+     * den Discover-Callback nur bei neu ins Feld kommenden Tags auslöst – liegt der Tag nach
+     * einem Schreibvorgang unverändert auf dem Gerät (z.B. direkt danach lesen, ohne ihn
+     * abzuheben), feuert sonst kein neuer Event und der nächste Modus wartet ewig.
+     */
+    private var readerResetCallback: (() -> Unit)? = null
+
+    fun registerReaderResetCallback(callback: (() -> Unit)?) {
+        readerResetCallback = callback
+    }
+
     fun setMode(mode: NfcMode) {
         _mode.value = mode
         _event.value = NfcEvent.Idle
+        if (mode !is NfcMode.Idle) readerResetCallback?.invoke()
     }
 
     fun clearEvent() {

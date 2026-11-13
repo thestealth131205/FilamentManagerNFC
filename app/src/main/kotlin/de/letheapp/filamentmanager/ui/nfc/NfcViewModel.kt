@@ -86,8 +86,12 @@ class NfcViewModel(private val database: AppDatabase) : ViewModel() {
                 NfcBridge.clearEvent()
             }
             is NfcEvent.ReadSuccess -> viewModelScope.launch {
-                val matched = event.data.sku.takeIf { it.isNotBlank() }?.let { dao.findBySku(it) }
-                _screenState.value = NfcScreenState.ReadResult(event.tagUid, event.data, matched?.id)
+                // Zuerst über die zuletzt auf diese UID geschriebene Spule abgleichen – die SKU
+                // ist kein Pflichtfeld und bei den meisten Spulen leer, dann greift nur der
+                // SKU-Abgleich nicht, obwohl die Spule über diesen Tag bekannt ist.
+                val matchedId = dao.findFilamentIdByTagUid(event.tagUid)?.takeIf { dao.getById(it) != null }
+                    ?: event.data.sku.takeIf { it.isNotBlank() }?.let { dao.findBySku(it)?.id }
+                _screenState.value = NfcScreenState.ReadResult(event.tagUid, event.data, matchedId)
                 NfcBridge.clearEvent()
             }
             is NfcEvent.WriteSuccess -> viewModelScope.launch {
