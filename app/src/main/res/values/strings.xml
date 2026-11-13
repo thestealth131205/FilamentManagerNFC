@@ -1,0 +1,55 @@
+<resources>
+    <string name="app_name">Filament Manager NFC</string>
+
+    <string name="nav_list">Spulen</string>
+    <string name="nav_scan">Etikett scannen</string>
+    <string name="nav_nfc">NFC</string>
+    <string name="nav_info">Info</string>
+
+    <string name="list_title">Filamentspulen</string>
+    <string name="list_empty">Noch keine Spulen angelegt. Tippe auf „+“, um eine hinzuzufügen.</string>
+    <string name="list_add">Spule hinzufügen</string>
+    <string name="list_search_hint">Suche nach Hersteller, Typ oder Farbe</string>
+
+    <string name="editor_title_new">Neue Spule</string>
+    <string name="editor_title_edit">Spule bearbeiten</string>
+    <string name="editor_section_basic">Basisdaten</string>
+    <string name="editor_section_temps">Temperaturen</string>
+    <string name="editor_section_advanced">Erweiterte Daten (Slicer, Einkauf)</string>
+    <string name="editor_sku">SKU</string>
+    <string name="editor_brand">Hersteller</string>
+    <string name="editor_type">Typ/Material</string>
+    <string name="editor_color_name">Farbname</string>
+    <string name="editor_diameter">Durchmesser (mm)</string>
+    <string name="editor_spool_weight">Filamentgewicht (g)</string>
+    <string name="editor_length_total">Gesamtlänge (m)</string>
+    <string name="editor_length_remaining">Restlänge (m)</string>
+    <string name="editor_extruder_min">Extruder min (°C)</string>
+    <string name="editor_extruder_max">Extruder max (°C)</string>
+    <string name="editor_hotbed_min">Druckbett min (°C)</string>
+    <string name="editor_hotbed_max">Druckbett max (°C)</string>
+    <string name="editor_density">Dichte (g/cm³)</string>
+    <string name="editor_flow_rate">Flussrate (%)</string>
+    <string name="editor_retraction_distance">Retraction-Distanz (mm)</string>
+    <string name="editor_retraction_speed">Retraction-Geschwindigkeit (mm/s)</string>
+    <string name="editor_fan_speed">Lüftergeschwindigkeit (%)</string>
+    <string name="editor_print_speed">Druckgeschwindigkeit (mm/s)</string>
+    <string name="editor_purchase_url">Kauf-Link</string>
+    <string name="editor_price_per_kg">Preis pro kg (€)</string>
+    <string name="editor_notes">Notizen</string>
+    <string name="editor_save">Speichern</string>
+    <string name="editor_delete">Löschen</string>
+
+    <string name="dropdown_create_new">Neu anlegen: „%1$s“</string>
+    <string name="dropdown_no_results">Keine Treffer</string>
+
+    <string name="nfc_title">NFC lesen/schreiben</string>
+    <string name="nfc_placeholder">NFC-Lesen/Schreiben für ACE-2-Pro-Tags folgt in den nächsten Schritten (PLAN.md, Schritt 3/4).</string>
+
+    <string name="scan_title">Etikett scannen</string>
+    <string name="scan_placeholder">Kamera-Scan (Barcode + OCR) folgt als letzter Schritt (PLAN.md, Schritt 5).</string>
+
+    <string name="info_developer">Entwickler: Dennis Bassy</string>
+    <string name="info_website">letheapp.de</string>
+    <string name="info_repo">GitHub-Repo</string>
+</resources>
