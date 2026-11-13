@@ -51,18 +51,31 @@ jobs:
         id: apk
         run: echo "path=$(find app/build/outputs/apk/release -name '*.apk' | head -n1)" >> "$GITHUB_OUTPUT"
 
+      - name: Versionsnummer ermitteln
+        id: version
+        run: |
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "name=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: APK umbenennen
+        id: renamed
+        run: |
+          DEST="$RUNNER_TEMP/AnycubicAceNFC-v${{ steps.version.outputs.name }}.apk"
+          cp "${{ steps.apk.outputs.path }}" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: filament-manager-nfc-apk
-          path: ${{ steps.apk.outputs.path }}
+          name: AnycubicAceNFC-v${{ steps.version.outputs.name }}
+          path: ${{ steps.renamed.outputs.path }}
           retention-days: 14
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') && env.KEYSTORE_PATH != ''
+        if: env.KEYSTORE_PATH != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Filament Manager NFC ${{ github.ref_name }}
-          files: ${{ steps.apk.outputs.path }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.name) }}
+          name: Anycubic Ace NFC v${{ steps.version.outputs.name }}
+          files: ${{ steps.renamed.outputs.path }}
           generate_release_notes: true
