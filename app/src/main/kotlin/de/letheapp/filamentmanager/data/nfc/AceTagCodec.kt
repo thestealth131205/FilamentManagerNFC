@@ -27,6 +27,22 @@ object AceTagCodec {
     const val LAST_PAGE = 36
     const val TOTAL_BYTES = (LAST_PAGE - FIRST_PAGE + 4) * 4
 
+    /** Page 3 (Capability Container) eines unbeschädigten, frischen NTAG215. */
+    val NTAG215_CC = byteArrayOf(0xE1.toByte(), 0x10, 0x3E, 0x00)
+
+    /**
+     * Prüft Page 3 gegen den erwarteten NTAG215-CC-Wert – nur eine Warnung, kein Abbruch:
+     * Ein abweichender Wert deutet auf einen anderen Tag-Typ oder einen beschädigten Tag hin,
+     * verhindert das Lesen/Schreiben unserer eigenen Daten-Pages (ab Page 4) aber nicht.
+     */
+    fun ccMismatchWarning(cc: ByteArray): String? {
+        if (cc.size < 4 || cc.contentEquals(NTAG215_CC)) return null
+        val actualHex = cc.take(4).joinToString(" ") { "%02X".format(it) }
+        return "Unerwarteter Capability-Container (Page 3): $actualHex statt ${
+            NTAG215_CC.joinToString(" ") { "%02X".format(it) }
+        } – vermutlich kein NTAG215 oder der Tag ist beschädigt."
+    }
+
     private val HEADER = byteArrayOf(0x7B, 0x00, 0x65, 0x00)
     private const val HEADER_PAGE = 4
     private const val SKU_START_PAGE = 5

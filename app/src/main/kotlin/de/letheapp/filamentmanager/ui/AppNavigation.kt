@@ -1,5 +1,6 @@
 package de.letheapp.filamentmanager.ui
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -57,7 +58,11 @@ private val bottomTabs = listOf(
 fun AppNavigation(database: AppDatabase) {
     val navController = rememberNavController()
 
+    // Jede Ziel-Route hat ihre eigene Scaffold+TopAppBar, die bereits den
+    // Status-Bar-Inset reserviert — ohne contentWindowInsets=0 würde dieser
+    // äußere Scaffold den gleichen Inset ein zweites Mal oben einrechnen.
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             val backStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = backStackEntry?.destination
@@ -110,6 +115,7 @@ fun AppNavigation(database: AppDatabase) {
                     isEditing = filamentId != null,
                     onSaved = { navController.popBackStack() },
                     onDeleted = { navController.popBackStack() },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable(Routes.SCAN) {

@@ -2,6 +2,7 @@ package de.letheapp.filamentmanager.ui.scan
 
 import de.letheapp.filamentmanager.data.catalog.BrandCatalog
 import de.letheapp.filamentmanager.data.catalog.CatalogColor
+import de.letheapp.filamentmanager.data.catalog.MaterialCatalog
 import de.letheapp.filamentmanager.data.db.SeedData
 import de.letheapp.filamentmanager.ui.editor.FilamentFormState
 
@@ -75,7 +76,11 @@ fun parseLabelText(rawText: String): FilamentFormState {
     } else {
         emptyList()
     }
-    val colorMatch = (catalogColors + genericColors).firstOrNull { c -> upper.contains(c.name.uppercase()) }
+    // Längere/speziellere Farbnamen zuerst prüfen (z.B. "Midnight Black" vor dem
+    // generischen "Black"), sonst würde das kürzere Wort fälschlich zuerst matchen.
+    val colorMatch = (catalogColors + BrandCatalog.commonColors + genericColors)
+        .sortedByDescending { it.name.length }
+        .firstOrNull { c -> upper.contains(c.name.uppercase()) }
 
     val diameter = Regex("(\\d[.,]\\d{1,2})\\s?MM")
         .findAll(upper)
@@ -88,6 +93,12 @@ fun parseLabelText(rawText: String): FilamentFormState {
 
     val temps = extractTempRanges(upper)
 
+    // Steht auf dem Etikett kein expliziter Temperaturbereich (häufig bei kleinen/
+    // generischen Etiketten), aber der Material-Typ wurde erkannt: Default-Werte aus
+    // der markenunabhängigen Material-Datenbank (MaterialCatalog) übernehmen, statt
+    // die Felder leer zu lassen.
+    val materialDefaults = if (type.isNotBlank()) MaterialCatalog.findByKuerzel(type) else null
+
     val sku = Regex("\\b[A-Z]{2,10}-\\d{2,6}\\b").find(upper)?.value.orEmpty()
 
     return FilamentFormState(
@@ -98,10 +109,10 @@ fun parseLabelText(rawText: String): FilamentFormState {
         colorHex = colorMatch?.hex,
         diameterMm = diameter?.toString() ?: "1.75",
         spoolWeightG = weightGrams?.toString().orEmpty(),
-        extruderTempMin = temps.nozzleMin.orEmpty(),
-        extruderTempMax = temps.nozzleMax.orEmpty(),
-        hotbedTempMin = temps.bedMin.orEmpty(),
-        hotbedTempMax = temps.bedMax.orEmpty(),
+        extruderTempMin = temps.nozzleMin ?: materialDefaults?.nozzleMin?.toString().orEmpty(),
+        extruderTempMax = temps.nozzleMax ?: materialDefaults?.nozzleMax?.toString().orEmpty(),
+        hotbedTempMin = temps.bedMin ?: materialDefaults?.bedMin?.toString().orEmpty(),
+        hotbedTempMax = temps.bedMax ?: materialDefaults?.bedMax?.toString().orEmpty(),
     )
 }
 

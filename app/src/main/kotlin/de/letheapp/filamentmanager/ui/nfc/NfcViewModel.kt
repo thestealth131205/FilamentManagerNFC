@@ -22,8 +22,11 @@ sealed interface NfcScreenState {
     data object WaitingToRead : NfcScreenState
     data class ReadEmpty(val tagUid: String) : NfcScreenState
     data class ReadResult(val tagUid: String, val data: AceTagData, val matchedFilamentId: Long?) : NfcScreenState
-    data class WaitingToWrite(val filament: FilamentEntity) : NfcScreenState
-    data class WriteSuccess(val tagUid: String, val filament: FilamentEntity) : NfcScreenState
+    data class WaitingToWrite(val filament: FilamentEntity, val copyIndex: Int = 1, val totalCopies: Int = 1) : NfcScreenState
+
+    /** Erster von zwei Chips erfolgreich beschrieben – wartet auf Bestätigung, bevor der zweite Chip angefordert wird. */
+    data class FirstTagWritten(val filament: FilamentEntity, val firstTagUid: String, val totalCopies: Int) : NfcScreenState
+    data class WriteSuccess(val tagUids: List<String>, val filament: FilamentEntity) : NfcScreenState
     data class Error(val message: String) : NfcScreenState
 }
 
@@ -41,6 +44,12 @@ class NfcViewModel(private val database: AppDatabase) : ViewModel() {
     private val _screenState = MutableStateFlow<NfcScreenState>(NfcScreenState.Idle)
     val screenState: StateFlow<NfcScreenState> = _screenState
 
+    /** UID des ersten Chips im "2 Chips identisch beschreiben"-Modus, bis der zweite fertig ist. */
+    private var firstTagUidOfCurrentWrite: String? = null
+
+    /** Nicht-blockierende Capability-Container-Warnung des zuletzt kontaktierten Tags. */
+    val ccWarning: StateFlow<String?> = NfcBridge.ccWarning
+
     init {
         viewModelScope.launch {
             NfcBridge.event.collect { event -> handleBridgeEvent(event) }
@@ -52,13 +61,41 @@ class NfcViewModel(private val database: AppDatabase) : ViewModel() {
         NfcBridge.setMode(NfcMode.Reading)
     }
 
-    fun startWriting(filament: FilamentEntity) {
-        _screenState.value = NfcScreenState.WaitingToWrite(filament)
-        NfcBridge.setMode(NfcMode.Writing(filament.toAceTagData(), filament.id))
+    /**
+     * [writeTwoTags]: optional für Spulen, bei denen der RFID-Chip je nach Einlegerichtung im
+     * ACE 2 Pro links oder rechts vom Lesekopf liegt – schreibt dieselben Daten danach auf einen
+     * zweiten, physisch getrennten Chip (siehe [continueWithSecondTag]), statt nur einen zu beschreiben.
+     */
+    fun startWriting(filament: FilamentEntity, writeTwoTags: Boolean = false) {
+        val totalCopies = if (writeTwoTags) 2 else 1
+        _screenState.value = NfcScreenState.WaitingToWrite(filament, copyIndex = 1, totalCopies = totalCopies)
+        NfcBridge.setMode(NfcMode.Writing(filament.toAceTagData(), filament.id, copyIndex = 1, totalCopies = totalCopies))
+    }
+
+    /** Nutzer hat den ersten Chip abgelegt/den zweiten aufgelegt – fordert den zweiten Schreibvorgang an. */
+    fun continueWithSecondTag(state: NfcScreenState.FirstTagWritten) {
+        _screenState.value = NfcScreenState.WaitingToWrite(state.filament, copyIndex = 2, totalCopies = state.totalCopies)
+        NfcBridge.setMode(
+            NfcMode.Writing(
+                tagData = state.filament.toAceTagData(),
+                filamentId = state.filament.id,
+                copyIndex = 2,
+                totalCopies = state.totalCopies,
+                previousTagUids = setOf(state.firstTagUid),
+            ),
+        )
+    }
+
+    /** Nutzer bricht nach dem ersten Chip ab – nur dieser eine Tag zählt als Ergebnis. */
+    fun finishWithFirstTagOnly(state: NfcScreenState.FirstTagWritten) {
+        firstTagUidOfCurrentWrite = null
+        _screenState.value = NfcScreenState.WriteSuccess(listOf(state.firstTagUid), state.filament)
+        NfcBridge.setMode(NfcMode.Idle)
     }
 
     /** Zurück zur Auswahl/Startansicht, Reader-Mode wieder in den Leerlauf versetzen. */
     fun reset() {
+        firstTagUidOfCurrentWrite = null
         _screenState.value = NfcScreenState.Idle
         NfcBridge.setMode(NfcMode.Idle)
     }
@@ -98,7 +135,17 @@ class NfcViewModel(private val database: AppDatabase) : ViewModel() {
                 dao.logNfcWrite(NfcWriteLogEntity(tagUid = event.tagUid, filamentId = event.filamentId))
                 val filament = dao.getById(event.filamentId)
                 if (filament != null) {
-                    _screenState.value = NfcScreenState.WriteSuccess(event.tagUid, filament)
+                    _screenState.value = if (event.copyIndex < event.totalCopies) {
+                        // Erster von zwei Chips fertig – nicht sofort den zweiten Schreibvorgang
+                        // scharf schalten, sonst würde der noch aufliegende erste Tag sofort erneut
+                        // erkannt. Wartet auf explizite Bestätigung über continueWithSecondTag().
+                        firstTagUidOfCurrentWrite = event.tagUid
+                        NfcScreenState.FirstTagWritten(filament, event.tagUid, event.totalCopies)
+                    } else {
+                        val allUids = listOfNotNull(firstTagUidOfCurrentWrite) + event.tagUid
+                        firstTagUidOfCurrentWrite = null
+                        NfcScreenState.WriteSuccess(allUids, filament)
+                    }
                 }
                 NfcBridge.clearEvent()
             }

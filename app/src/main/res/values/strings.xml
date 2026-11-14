@@ -22,6 +22,7 @@
     <string name="editor_brand">Hersteller</string>
     <string name="editor_type">Typ/Material</string>
     <string name="editor_color_name">Farbname</string>
+    <string name="editor_color_code_missing_hint">Kein Farbcode zugewiesen – auf den Kreis tippen und passenden Farbcode wählen, sonst wird Schwarz auf den Tag geschrieben</string>
     <string name="editor_diameter">Durchmesser (mm)</string>
     <string name="editor_spool_weight">Filamentgewicht (g)</string>
     <string name="editor_length_total">Gesamtlänge (m)</string>
@@ -52,6 +53,7 @@
     <string name="nfc_ok">OK</string>
     <string name="nfc_waiting_hold_tag">Tag an die Rückseite des Telefons halten…</string>
     <string name="nfc_waiting_write">Schreibe „%1$s“ – Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_waiting_write_multi">Schreibe Chip %1$d von %2$d für „%3$s“ – Tag an die Rückseite des Telefons halten…</string>
     <string name="nfc_read_intro">Lies einen NFC-Tag aus, um die Daten einer Spule zu übernehmen oder mit einer vorhandenen SKU abzugleichen.</string>
     <string name="nfc_read_start">Tag lesen</string>
     <string name="nfc_read_again">Erneut lesen</string>
@@ -68,9 +70,16 @@
     <string name="nfc_label_length">Länge</string>
     <string name="nfc_label_weight">Gewicht</string>
     <string name="nfc_write_intro">Spule auswählen, deren Daten auf den Tag geschrieben werden sollen.</string>
+    <string name="nfc_write_two_tags_title">2 Chips identisch beschreiben</string>
+    <string name="nfc_write_two_tags_desc">Für Spulen mit Chip auf beiden Seiten, da der Lesekopf im ACE 2 Pro je nach Einlegerichtung links oder rechts liegt.</string>
     <string name="nfc_write_no_filaments">Noch keine Spulen angelegt – lege zuerst eine Spule an.</string>
+    <string name="nfc_write_first_done_title">Erster Chip fertig</string>
+    <string name="nfc_write_first_done_body">Chip (UID %1$s) wurde beschrieben und verifiziert. Jetzt den ersten Chip entfernen und den zweiten, anderen Chip derselben Spule auflegen.</string>
+    <string name="nfc_write_second_tag_continue">Zweiten Chip beschreiben</string>
+    <string name="nfc_write_finish_one_tag">Nur diesen einen Chip verwenden</string>
     <string name="nfc_write_success_title">Erfolgreich geschrieben</string>
     <string name="nfc_write_success_body">Tag (UID %1$s) wurde beschrieben und per Lesevergleich verifiziert.</string>
+    <string name="nfc_write_success_body_multi">Beide Chips (UIDs %1$s) wurden identisch beschrieben und per Lesevergleich verifiziert.</string>
     <string name="nfc_error_title">Fehler</string>
 
     <string name="scan_title">Etikett scannen</string>

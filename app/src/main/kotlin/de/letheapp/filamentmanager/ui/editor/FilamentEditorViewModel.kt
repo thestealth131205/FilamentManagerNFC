@@ -3,7 +3,9 @@ package de.letheapp.filamentmanager.ui.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.letheapp.filamentmanager.data.catalog.BrandCatalog
+import de.letheapp.filamentmanager.data.catalog.CatalogColor
 import de.letheapp.filamentmanager.data.catalog.CatalogMaterial
+import de.letheapp.filamentmanager.data.catalog.MaterialCatalog
 import de.letheapp.filamentmanager.data.catalog.SkuGenerator
 import de.letheapp.filamentmanager.data.catalog.parseCatalogHex
 import de.letheapp.filamentmanager.data.catalog.toCatalogHex
@@ -106,6 +108,19 @@ class FilamentEditorViewModel(
         (catalogNames + learnedAll).distinct().sorted()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /**
+     * Auswahl für den Farbcode-Picker (Swatch neben dem Namensfeld): Katalogfarben
+     * der aktuellen Hersteller/Typ-Kombi zuerst, danach die markenunabhängigen
+     * [BrandCatalog.commonColors] (z.B. "Ceramic", "Midnight Black") – damit auch
+     * Farben, deren Name die OCR nicht erkennt oder die frei eingetippt wurden,
+     * nachträglich einem echten Farbcode zugeordnet werden können statt beim
+     * Speichern stillschweigend auf Schwarz zurückzufallen.
+     */
+    val colorCodeOptions: StateFlow<List<CatalogColor>> = catalogMaterial.map { material ->
+        val specific = material?.colors.orEmpty()
+        (specific + BrandCatalog.commonColors).distinctBy { it.name.lowercase() }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BrandCatalog.commonColors)
+
     init {
         if (filamentId != null) {
             viewModelScope.launch {
@@ -138,14 +153,29 @@ class FilamentEditorViewModel(
         recomputeSku()
     }
 
-    /** Farbe gewählt: Feld setzen, Hex-Wert aus dem Katalog übernehmen falls bekannt, sonst null. */
+    /**
+     * Farbe gewählt: Feld setzen, Hex-Wert aus dem Katalog übernehmen falls bekannt
+     * (zuerst die konkrete Hersteller/Typ-Kombi, sonst markenunabhängig per Name
+     * z.B. "Ceramic"/"Midnight Black"), sonst null – dann kann der Hex-Wert noch
+     * über [selectColorHex] (Farbcode-Picker im Editor) nachträglich gesetzt werden.
+     */
     fun selectColor(name: String) {
         val state = form.value
         form.value = state.copy(
             colorName = name,
-            colorHex = BrandCatalog.hexFor(state.brand, state.type, name),
+            colorHex = BrandCatalog.hexFor(state.brand, state.type, name) ?: BrandCatalog.hexForAny(name),
         )
         recomputeSku()
+    }
+
+    /**
+     * Farbcode (Hex) direkt über den Picker gewählt, unabhängig vom Namensfeld –
+     * für Fälle, in denen der eingetragene/erkannte Farbname (z.B. aus OCR oder
+     * frei eingetippt) keinem bekannten Katalogeintrag entspricht und sonst beim
+     * Speichern stillschweigend auf Schwarz zurückfiele (siehe toEntity()).
+     */
+    fun selectColorHex(hex: String) {
+        form.value = form.value.copy(colorHex = hex)
     }
 
     /**
@@ -161,17 +191,36 @@ class FilamentEditorViewModel(
     /**
      * Füllt leere Temperaturfelder aus dem Katalog auf (nur wenn noch nichts eingetragen ist –
      * überschreibt nie eine vom Nutzer schon gesetzte Temperatur) und aktualisiert den Hex-Wert
-     * der aktuellen Farbe, falls sie zur neuen Hersteller/Typ-Kombination passt.
+     * der aktuellen Farbe, falls sie zur neuen Hersteller/Typ-Kombination passt. Fällt für die
+     * Temperaturen auf die markenunabhängige [MaterialCatalog] zurück, wenn der gewählte Typ zu
+     * keinem Markeneintrag passt (unbekannte Marke, oder Hochleistungs-/Support-Materialien wie
+     * PEEK/PVA, die im Markenkatalog nicht hinterlegt sind) – liefert diese ebenfalls nichts
+     * (z.B. Resin/Pulver ohne Düsen-/Betttemperatur), bleiben die Felder unverändert.
      */
     private fun applyCatalogAutofill() {
         val state = form.value
-        val material = BrandCatalog.findMaterial(state.brand, state.type) ?: return
+        val brandMaterial = BrandCatalog.findMaterial(state.brand, state.type)
+        val generic = if (brandMaterial == null && state.type.isNotBlank()) {
+            MaterialCatalog.findByKuerzel(state.type)
+        } else {
+            null
+        }
         form.value = state.copy(
-            extruderTempMin = state.extruderTempMin.ifBlank { material.nozzleMin.toString() },
-            extruderTempMax = state.extruderTempMax.ifBlank { material.nozzleMax.toString() },
-            hotbedTempMin = state.hotbedTempMin.ifBlank { material.bedMin.toString() },
-            hotbedTempMax = state.hotbedTempMax.ifBlank { material.bedMax.toString() },
-            colorHex = BrandCatalog.hexFor(state.brand, state.type, state.colorName) ?: state.colorHex,
+            extruderTempMin = state.extruderTempMin.ifBlank {
+                (brandMaterial?.nozzleMin ?: generic?.nozzleMin)?.toString() ?: state.extruderTempMin
+            },
+            extruderTempMax = state.extruderTempMax.ifBlank {
+                (brandMaterial?.nozzleMax ?: generic?.nozzleMax)?.toString() ?: state.extruderTempMax
+            },
+            hotbedTempMin = state.hotbedTempMin.ifBlank {
+                (brandMaterial?.bedMin ?: generic?.bedMin)?.toString() ?: state.hotbedTempMin
+            },
+            hotbedTempMax = state.hotbedTempMax.ifBlank {
+                (brandMaterial?.bedMax ?: generic?.bedMax)?.toString() ?: state.hotbedTempMax
+            },
+            colorHex = BrandCatalog.hexFor(state.brand, state.type, state.colorName)
+                ?: BrandCatalog.hexForAny(state.colorName)
+                ?: state.colorHex,
         )
     }
 

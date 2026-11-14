@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -59,7 +60,9 @@ fun NfcScreen(
     onNavigateToEditor: (Long?) -> Unit,
 ) {
     var tab by remember { mutableStateOf(0) }
+    var writeTwoTags by remember { mutableStateOf(false) }
     val screenState by viewModel.screenState.collectAsState()
+    val ccWarning by viewModel.ccWarning.collectAsState()
 
     // Verlässt der Nutzer den Screen (anderer Bottom-Tab), darf der Reader-Mode
     // nicht im "Schreiben"-Modus auf dem nächsten zufällig aufgelegten Tag landen.
@@ -81,6 +84,9 @@ fun NfcScreen(
                     text = { Text(stringResource(R.string.nfc_tab_write)) },
                 )
             }
+            if (ccWarning != null) {
+                CcWarningBanner(ccWarning!!)
+            }
             Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 if (tab == 0) {
                     ReadTab(
@@ -101,7 +107,11 @@ fun NfcScreen(
                     WriteTab(
                         state = screenState,
                         filaments = viewModel.filaments.collectAsState().value,
-                        onSelectFilament = viewModel::startWriting,
+                        writeTwoTags = writeTwoTags,
+                        onWriteTwoTagsChange = { writeTwoTags = it },
+                        onSelectFilament = { filament -> viewModel.startWriting(filament, writeTwoTags) },
+                        onContinueSecondTag = viewModel::continueWithSecondTag,
+                        onFinishWithFirstTagOnly = viewModel::finishWithFirstTagOnly,
                         onCancel = viewModel::reset,
                         onDone = viewModel::reset,
                     )
@@ -150,18 +160,49 @@ private fun ReadTab(
 private fun WriteTab(
     state: NfcScreenState,
     filaments: List<FilamentEntity>,
+    writeTwoTags: Boolean,
+    onWriteTwoTagsChange: (Boolean) -> Unit,
     onSelectFilament: (FilamentEntity) -> Unit,
+    onContinueSecondTag: (NfcScreenState.FirstTagWritten) -> Unit,
+    onFinishWithFirstTagOnly: (NfcScreenState.FirstTagWritten) -> Unit,
     onCancel: () -> Unit,
     onDone: () -> Unit,
 ) {
     when (state) {
         is NfcScreenState.WaitingToWrite -> WaitingCard(
-            text = stringResource(R.string.nfc_waiting_write, "${state.filament.brand} – ${state.filament.type}"),
+            text = if (state.totalCopies > 1) {
+                stringResource(
+                    R.string.nfc_waiting_write_multi,
+                    state.copyIndex,
+                    state.totalCopies,
+                    "${state.filament.brand} – ${state.filament.type}",
+                )
+            } else {
+                stringResource(R.string.nfc_waiting_write, "${state.filament.brand} – ${state.filament.type}")
+            },
             onCancel = onCancel,
         )
+        is NfcScreenState.FirstTagWritten -> MessageCard(
+            title = stringResource(R.string.nfc_write_first_done_title),
+            body = stringResource(R.string.nfc_write_first_done_body, state.firstTagUid),
+        ) {
+            Button(onClick = { onContinueSecondTag(state) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.nfc_write_second_tag_continue))
+            }
+            OutlinedButton(
+                onClick = { onFinishWithFirstTagOnly(state) },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Text(stringResource(R.string.nfc_write_finish_one_tag))
+            }
+        }
         is NfcScreenState.WriteSuccess -> MessageCard(
             title = stringResource(R.string.nfc_write_success_title),
-            body = stringResource(R.string.nfc_write_success_body, state.tagUid),
+            body = if (state.tagUids.size > 1) {
+                stringResource(R.string.nfc_write_success_body_multi, state.tagUids.joinToString(", "))
+            } else {
+                stringResource(R.string.nfc_write_success_body, state.tagUids.firstOrNull().orEmpty())
+            },
         ) {
             Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.nfc_ok))
@@ -170,6 +211,22 @@ private fun WriteTab(
         is NfcScreenState.Error -> ErrorCard(state.message, onCancel)
         else -> Column(modifier = Modifier.fillMaxSize()) {
             Text(stringResource(R.string.nfc_write_intro), modifier = Modifier.padding(bottom = 12.dp))
+            Card(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.padding(end = 12.dp)) {
+                        Text(stringResource(R.string.nfc_write_two_tags_title), style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            stringResource(R.string.nfc_write_two_tags_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Switch(checked = writeTwoTags, onCheckedChange = onWriteTwoTagsChange)
+                }
+            }
             if (filaments.isEmpty()) {
                 Text(stringResource(R.string.nfc_write_no_filaments))
             } else {
@@ -203,6 +260,24 @@ private fun FilamentPickRow(filament: FilamentEntity, onClick: () -> Unit) {
                 Text(filament.colorName ?: "", style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+}
+
+/** Nicht-blockierender Hinweis, falls Page 3 (Capability Container) nicht dem erwarteten NTAG215-Wert entspricht. */
+@Composable
+private fun CcWarningBanner(message: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Text(
+            message,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            modifier = Modifier.padding(12.dp),
+        )
     }
 }
 
