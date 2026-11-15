@@ -2,6 +2,8 @@ package de.letheapp.filamentmanager.data.nfc
 
 import android.nfc.Tag
 import android.nfc.tech.NfcA
+import androidx.annotation.StringRes
+import de.letheapp.filamentmanager.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -27,6 +29,12 @@ sealed interface NfcMode {
     ) : NfcMode
 }
 
+/**
+ * Lokalisierbarer Meldungstext ohne Context-Zugriff auf Bridge-/Codec-Ebene – die UI löst
+ * [resId] mit [args] per `stringResource` in der aktuellen Systemsprache auf.
+ */
+data class NfcMessage(@StringRes val resId: Int, val args: List<String> = emptyList())
+
 /** Ergebnis eines Tag-Kontakts – wird von der UI konsumiert und nach Verarbeitung zurück auf [Idle] gesetzt. */
 sealed interface NfcEvent {
     data object Idle : NfcEvent
@@ -38,7 +46,7 @@ sealed interface NfcEvent {
         val copyIndex: Int = 1,
         val totalCopies: Int = 1,
     ) : NfcEvent
-    data class Error(val message: String) : NfcEvent
+    data class Error(val message: NfcMessage) : NfcEvent
 }
 
 /**
@@ -54,8 +62,8 @@ object NfcBridge {
     val event: StateFlow<NfcEvent> = _event
 
     /** Nicht-blockierende Warnung zu Page 3 (Capability Container) des zuletzt kontaktierten Tags. */
-    private val _ccWarning = MutableStateFlow<String?>(null)
-    val ccWarning: StateFlow<String?> = _ccWarning
+    private val _ccWarning = MutableStateFlow<NfcMessage?>(null)
+    val ccWarning: StateFlow<NfcMessage?> = _ccWarning
 
     /**
      * Von `MainActivity` gesetzt: schaltet den Reader-Mode kurz aus/ein. Nötig, weil Android
@@ -87,7 +95,7 @@ object NfcBridge {
 
         val nfcA = NfcA.get(tag)
         if (nfcA == null) {
-            _event.value = NfcEvent.Error("Tag-Typ nicht unterstützt (kein NFC-A/NTAG-Tag).")
+            _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_error_unsupported_tag))
             return
         }
         val uid = tag.id.joinToString("") { "%02X".format(it) }
@@ -103,7 +111,9 @@ object NfcBridge {
                 NfcMode.Idle -> Unit
             }
         } catch (e: Exception) {
-            _event.value = NfcEvent.Error("Fehler bei der Tag-Kommunikation: ${e.message ?: e::class.simpleName}")
+            _event.value = NfcEvent.Error(
+                NfcMessage(R.string.nfc_error_communication, listOf(e.message ?: e::class.simpleName.orEmpty())),
+            )
         } finally {
             runCatching { if (nfcA.isConnected) nfcA.close() }
         }
@@ -120,10 +130,7 @@ object NfcBridge {
 
     private fun handleWrite(nfcA: NfcA, uid: String, mode: NfcMode.Writing) {
         if (uid in mode.previousTagUids) {
-            _event.value = NfcEvent.Error(
-                "Das ist derselbe Chip wie beim vorherigen Schreibvorgang (UID $uid). " +
-                    "Für den zweiten Chip einen anderen, physisch getrennten Tag auflegen.",
-            )
+            _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_error_same_chip, listOf(uid)))
             return
         }
         val pages = AceTagCodec.encode(mode.tagData)
@@ -134,9 +141,7 @@ object NfcBridge {
         if (AceTagCodec.verify(verifyRaw, pages)) {
             _event.value = NfcEvent.WriteSuccess(uid, mode.filamentId, mode.copyIndex, mode.totalCopies)
         } else {
-            _event.value = NfcEvent.Error(
-                "Schreiben unvollständig – Lesevergleich stimmt nicht überein. Tag erneut auflegen und wiederholen.",
-            )
+            _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_error_verify_failed))
         }
     }
 }

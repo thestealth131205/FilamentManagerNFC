@@ -13,8 +13,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import de.letheapp.filamentmanager.R
 
 /**
  * Wiederverwendbares Dropdown mit Live-Suche für Stammdaten mit vielen möglichen
@@ -100,7 +102,7 @@ fun SearchableDropdown(
                 }
             }
             if (query.isNotBlank() && !exactMatchExists) {
-                DropdownRow("Neu anlegen: „$query“") {
+                DropdownRow(stringResource(R.string.dropdown_create_new, query)) {
                     expanded = false
                     onValueSelected(query)
                 }

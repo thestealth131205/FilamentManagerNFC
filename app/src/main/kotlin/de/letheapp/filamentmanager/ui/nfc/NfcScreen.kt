@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import de.letheapp.filamentmanager.R
 import de.letheapp.filamentmanager.data.db.FilamentEntity
 import de.letheapp.filamentmanager.data.nfc.AceTagData
+import de.letheapp.filamentmanager.data.nfc.NfcMessage
 import de.letheapp.filamentmanager.ui.scan.ScanDraftHolder
 
 /**
@@ -265,7 +266,10 @@ private fun FilamentPickRow(filament: FilamentEntity, onClick: () -> Unit) {
 
 /** Nicht-blockierender Hinweis, falls Page 3 (Capability Container) nicht dem erwarteten NTAG215-Wert entspricht. */
 @Composable
-private fun CcWarningBanner(message: String) {
+private fun NfcMessage.resolve(): String = stringResource(resId, *args.toTypedArray())
+
+@Composable
+private fun CcWarningBanner(message: NfcMessage) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         colors = androidx.compose.material3.CardDefaults.cardColors(
@@ -273,7 +277,7 @@ private fun CcWarningBanner(message: String) {
         ),
     ) {
         Text(
-            message,
+            message.resolve(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onErrorContainer,
             modifier = Modifier.padding(12.dp),
@@ -308,7 +312,7 @@ private fun MessageCard(title: String, body: String, actions: @Composable () -> 
 }
 
 @Composable
-private fun ErrorCard(message: String, onDismiss: () -> Unit) {
+private fun ErrorCard(message: NfcMessage, onDismiss: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -319,7 +323,7 @@ private fun ErrorCard(message: String, onDismiss: () -> Unit) {
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(bottom = 8.dp),
         )
-        Text(message, modifier = Modifier.padding(bottom = 24.dp))
+        Text(message.resolve(), modifier = Modifier.padding(bottom = 24.dp))
         Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.nfc_ok))
         }

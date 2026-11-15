@@ -9,6 +9,7 @@ import de.letheapp.filamentmanager.data.db.NfcWriteLogEntity
 import de.letheapp.filamentmanager.data.nfc.AceTagData
 import de.letheapp.filamentmanager.data.nfc.NfcBridge
 import de.letheapp.filamentmanager.data.nfc.NfcEvent
+import de.letheapp.filamentmanager.data.nfc.NfcMessage
 import de.letheapp.filamentmanager.data.nfc.NfcMode
 import de.letheapp.filamentmanager.ui.editor.FilamentFormState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +28,7 @@ sealed interface NfcScreenState {
     /** Erster von zwei Chips erfolgreich beschrieben – wartet auf Bestätigung, bevor der zweite Chip angefordert wird. */
     data class FirstTagWritten(val filament: FilamentEntity, val firstTagUid: String, val totalCopies: Int) : NfcScreenState
     data class WriteSuccess(val tagUids: List<String>, val filament: FilamentEntity) : NfcScreenState
-    data class Error(val message: String) : NfcScreenState
+    data class Error(val message: NfcMessage) : NfcScreenState
 }
 
 /**
@@ -48,7 +49,7 @@ class NfcViewModel(private val database: AppDatabase) : ViewModel() {
     private var firstTagUidOfCurrentWrite: String? = null
 
     /** Nicht-blockierende Capability-Container-Warnung des zuletzt kontaktierten Tags. */
-    val ccWarning: StateFlow<String?> = NfcBridge.ccWarning
+    val ccWarning: StateFlow<NfcMessage?> = NfcBridge.ccWarning
 
     init {
         viewModelScope.launch {

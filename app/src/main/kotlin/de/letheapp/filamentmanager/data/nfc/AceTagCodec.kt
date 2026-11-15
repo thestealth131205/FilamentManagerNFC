@@ -1,5 +1,7 @@
 package de.letheapp.filamentmanager.data.nfc
 
+import de.letheapp.filamentmanager.R
+
 /**
  * Byte-genaues Encode/Decode für das ACE-2-Pro-kompatible NTAG-Format,
  * siehe PLAN.md "Tag-Hardware & Format" (gegen zwei unabhängige Referenz-
@@ -35,12 +37,11 @@ object AceTagCodec {
      * Ein abweichender Wert deutet auf einen anderen Tag-Typ oder einen beschädigten Tag hin,
      * verhindert das Lesen/Schreiben unserer eigenen Daten-Pages (ab Page 4) aber nicht.
      */
-    fun ccMismatchWarning(cc: ByteArray): String? {
+    fun ccMismatchWarning(cc: ByteArray): NfcMessage? {
         if (cc.size < 4 || cc.contentEquals(NTAG215_CC)) return null
         val actualHex = cc.take(4).joinToString(" ") { "%02X".format(it) }
-        return "Unerwarteter Capability-Container (Page 3): $actualHex statt ${
-            NTAG215_CC.joinToString(" ") { "%02X".format(it) }
-        } – vermutlich kein NTAG215 oder der Tag ist beschädigt."
+        val expectedHex = NTAG215_CC.joinToString(" ") { "%02X".format(it) }
+        return NfcMessage(R.string.nfc_warning_cc_mismatch, listOf(actualHex, expectedHex))
     }
 
     private val HEADER = byteArrayOf(0x7B, 0x00, 0x65, 0x00)
