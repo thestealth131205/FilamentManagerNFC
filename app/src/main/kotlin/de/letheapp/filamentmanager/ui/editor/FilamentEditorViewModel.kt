@@ -102,10 +102,16 @@ class FilamentEditorViewModel(
         material?.colors?.map { it.name } ?: learnedTop3
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Für die Suche: Katalogfarben der aktuellen Kombi plus alle gelernten Farben, dedupliziert. */
+    /**
+     * Für die Suche: Katalogfarben der aktuellen Kombi plus alle gelernten Farben plus die
+     * komplette markenunabhängige Farbliste ([BrandCatalog.commonColors], ~230 Einträge) –
+     * sonst war diese riesige Liste nur im separaten Hex-Code-Picker sichtbar, nie im
+     * normalen Namensfeld-Dropdown selbst.
+     */
     val colorAllEntries: StateFlow<List<String>> = combine(catalogMaterial, colorAllAlpha) { material, learnedAll ->
         val catalogNames = material?.colors?.map { it.name } ?: emptyList()
-        (catalogNames + learnedAll).distinct().sorted()
+        val commonNames = BrandCatalog.commonColors.map { it.name }
+        (catalogNames + commonNames + learnedAll).distinct().sorted()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
