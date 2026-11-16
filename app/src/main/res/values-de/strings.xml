@@ -85,6 +85,38 @@
     <string name="nfc_error_verify_failed">Schreiben unvollständig – Lesevergleich stimmt nicht überein. Tag erneut auflegen und wiederholen.</string>
     <string name="nfc_warning_cc_mismatch">Unerwarteter Capability-Container (Page 3): %1$s statt %2$s – vermutlich kein NTAG215 oder der Tag ist beschädigt.</string>
 
+    <string name="nfc_tools_menu">Tools</string>
+    <string name="nfc_tools_dialog_title">Tools</string>
+    <string name="nfc_tools_dialog_desc">Schaltet zusätzliche Tag-Funktionen jenseits der Spulendaten frei: eine automatisch öffnende URL sowie NTAG-Passwortschutz (Sperren/Entsperren, Passwort setzen/löschen). Der Reiter „Schreiben“ wechselt bei aktiviertem Modus zu diesen Tools.</string>
+    <string name="nfc_tools_dialog_switch">Erweiterte Tools aktivieren</string>
+    <string name="nfc_tools_dialog_close">Schließen</string>
+
+    <string name="nfc_tool_write_intro">Die erweiterten Tools schreiben andere Funktionen als Spulendaten auf den Tag. Ein Tag trägt entweder Spulendaten oder eines dieser Tools, nie beides gleichzeitig.</string>
+    <string name="nfc_tool_url_title">URL-Tag schreiben</string>
+    <string name="nfc_tool_url_desc">Schreibt einen Standard-NDEF-URL-Eintrag. Öffnet sich automatisch beim Lesen mit jedem NFC-fähigen Handy, nicht nur mit dieser App.</string>
+    <string name="nfc_tool_url_label">URL</string>
+    <string name="nfc_tool_url_button">Auf Tag schreiben</string>
+    <string name="nfc_tool_password_title">Passwortschutz</string>
+    <string name="nfc_tool_password_desc">Standard-NTAG-Funktion, schützt nur das Schreiben (Lesen bleibt frei, damit Drucker/AMS den Tag weiter lesen können). Passwort: bis zu 4 ASCII-Zeichen. Zum Ändern eines Passworts zuerst entsperren, danach das neue setzen.</string>
+    <string name="nfc_tool_password_label">Passwort (bis zu 4 Zeichen)</string>
+    <string name="nfc_tool_lock_button">Sperren</string>
+    <string name="nfc_tool_unlock_button">Entsperren</string>
+    <string name="nfc_tool_set_password_button">Passwort setzen</string>
+    <string name="nfc_tool_clear_password_button">Passwort löschen</string>
+    <string name="nfc_tool_waiting_write_url">Schreibe URL-Tag – Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_tool_waiting_lock">Sperre Tag – Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_tool_waiting_unlock">Entsperre Tag – Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_tool_waiting_set_password">Setze Passwort – Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_tool_waiting_clear_password">Lösche Passwort – Tag an die Rückseite des Telefons halten…</string>
+    <string name="nfc_tool_url_success">URL-Tag geschrieben und verifiziert. Öffnet sich beim Lesen automatisch.</string>
+    <string name="nfc_tool_lock_success">Tag gesperrt. Schreiben erfordert jetzt das Passwort, Lesen bleibt frei.</string>
+    <string name="nfc_tool_unlock_success">Tag entsperrt – Schreiben erfordert kein Passwort mehr.</string>
+    <string name="nfc_tool_set_password_success">Passwort gesetzt.</string>
+    <string name="nfc_tool_clear_password_success">Passwort gelöscht (auf Werksvorgabe zurückgesetzt).</string>
+    <string name="nfc_tool_error_url_too_long">URL ist zu lang für den Tag (max. %1$s Zeichen).</string>
+    <string name="nfc_tool_error_locked_or_auth">Nicht möglich – der Tag ist noch gesperrt. Zuerst mit dem aktuellen Passwort entsperren.</string>
+    <string name="nfc_tool_error_wrong_password">Falsches Passwort für diesen Tag.</string>
+
     <string name="scan_title">Etikett scannen</string>
     <string name="scan_permission_missing">Für den Kamera-Scan wird die Kamera-Berechtigung benötigt.</string>
     <string name="scan_permission_request">Berechtigung erteilen</string>

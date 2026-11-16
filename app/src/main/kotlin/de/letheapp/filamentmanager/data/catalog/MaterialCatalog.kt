@@ -79,6 +79,18 @@ object MaterialCatalog {
             listOf("Industriegehäuse", "Automobil-Innenraum", "Vorrichtungsbau"),
         ),
         MaterialSpec(
+            "PC-PBT", "Polycarbonat / PBT Blend", "Technische & Konstruktions-Filamente", "FDM",
+            250, 280, 90, 110, true,
+            listOf("Hohe Schlagzähigkeit auch bei Kälte", "Gute Chemikalienbeständigkeit", "Geringeres Warping als reines PC"),
+            listOf("Elektronikgehäuse", "Steckverbinder", "Automobil-Außenanbauteile"),
+        ),
+        MaterialSpec(
+            "PC-FR", "Flammhemmendes Polycarbonat", "Technische & Konstruktions-Filamente", "FDM",
+            270, 300, 100, 120, true,
+            listOf("Selbstverlöschend (UL94-Einstufung)", "Hohe Wärmeformbeständigkeit", "Starkes Warping"),
+            listOf("Elektrogehäuse mit Brandschutzauflagen", "Schienenfahrzeug-Innenverkleidung", "Steckdosenleisten"),
+        ),
+        MaterialSpec(
             "PA6", "Polyamid 6 (Nylon 6)", "Technische & Konstruktions-Filamente", "FDM",
             250, 285, 80, 100, true,
             listOf("Sehr hohe Zugfestigkeit und Abriebfestigkeit", "Gute Chemikalienresistenz", "Extrem hygroskopisch (muss getrocknet werden)"),
@@ -89,6 +101,18 @@ object MaterialCatalog {
             250, 280, 80, 100, true,
             listOf("Geringere Wasseraufnahme als PA6", "Hohe Maßhaltigkeit", "Schlagzäh auch bei niedrigen Temperaturen", "Beständig gegen Öle und Fette"),
             listOf("Funktionsprototypen", "Schnappverbindungen", "Kraftstoffleitungen", "Drohnenrahmen"),
+        ),
+        MaterialSpec(
+            "PA66", "Polyamid 66 (Nylon 66)", "Technische & Konstruktions-Filamente", "FDM",
+            270, 295, 90, 110, true,
+            listOf("Höhere Steifigkeit und Temperaturbeständigkeit als PA6/PA12", "Extrem hygroskopisch", "Starkes Warping ohne Heizkammer"),
+            listOf("Hochbelastete Zahnräder", "Motorraumnahe Automobilteile", "Industrielle Vorrichtungen"),
+        ),
+        MaterialSpec(
+            "CoPA", "Copolyamid", "Technische & Konstruktions-Filamente", "FDM",
+            240, 265, 70, 90, true,
+            listOf("Deutlich bessere Layerhaftung als reines PA6/PA66", "Geringeres Warping", "Weiterhin hygroskopisch"),
+            listOf("Funktionsprototypen", "Schnappverbindungen", "Dünnwandige Gehäuse mit Nylon-Eigenschaften"),
         ),
         MaterialSpec(
             "PP", "Polypropylen", "Technische & Konstruktions-Filamente", "FDM",
@@ -113,6 +137,12 @@ object MaterialCatalog {
             230, 250, 95, 110, true,
             listOf("Löslich in D-Limonen", "Leicht und schlagzäh", "Mattes Finish", "Gute Schleifbarkeit"),
             listOf("Stützmaterial für ABS/ASA", "Modellbau", "Verpackungsprototypen"),
+        ),
+        MaterialSpec(
+            "PBT", "Polybutylenterephthalat", "Technische & Konstruktions-Filamente", "FDM",
+            230, 255, 75, 90, false,
+            listOf("Hohe Rückstellelastizität und Ermüdungsfestigkeit", "Gute elektrische Isolationseigenschaften", "Geringe Feuchtigkeitsaufnahme"),
+            listOf("Elektrische Steckverbinder", "Federnde Clips", "Gehäuse für Elektronik"),
         ),
 
         // Flexible & Elastomere Filamente (FDM)
@@ -167,6 +197,18 @@ object MaterialCatalog {
             listOf("Elektrowerkzeuggehäuse", "Strukturbauteile", "Automobilkomponenten"),
         ),
         MaterialSpec(
+            "PA-AF", "Aramid- (Kevlar-) faserverstärktes Polyamid", "Faserverstärkte & Verbund-Filamente", "FDM",
+            260, 290, 90, 110, true,
+            listOf("Extrem hohe Schlag- und Durchschlagfestigkeit", "Weniger abrasiv als Carbon- oder Glasfaser", "Hohe Zähigkeit auch bei dünnen Wandstärken"),
+            listOf("Schutzausrüstung", "Schlagfeste Drohnenteile", "Vibrationsarme Strukturbauteile"),
+        ),
+        MaterialSpec(
+            "PP-CF / PP-GF", "Faserverstärktes Polypropylen", "Faserverstärkte & Verbund-Filamente", "FDM",
+            230, 260, 90, 110, true,
+            listOf("Deutlich höhere Steifigkeit als reines PP", "Sehr geringes Gewicht", "Sehr hohe Chemikalienbeständigkeit", "Weiterhin schwierige Druckbetthaftung"),
+            listOf("Leichtbau-Gehäuse", "Chemisch belastete Funktionsteile", "Automobil-Unterbodenverkleidung"),
+        ),
+        MaterialSpec(
             "PC-CF", "Carbonfaserverstärktes Polycarbonat", "Faserverstärkte & Verbund-Filamente", "FDM",
             280, 310, 105, 120, true,
             listOf("Maximale Steifigkeit und Hitzebeständigkeit", "Geringeres Warping als reines PC", "Stark abrasiv"),
@@ -189,6 +231,12 @@ object MaterialCatalog {
             200, 225, 50, 60, false,
             listOf("Hohes Eigengewicht", "Polierbar für echten Metallglanz", "Kann oxidieren/Patina ansetzen", "Extrem abrasiv"),
             listOf("Statuen", "Schmuck", "Gewichte", "Repliken"),
+        ),
+        MaterialSpec(
+            "Stone-Fill", "Mineralgefülltes PLA (Stein-/Marmoroptik)", "Faserverstärkte & Verbund-Filamente", "FDM",
+            195, 220, 50, 60, false,
+            listOf("Stein- bzw. Marmoroptik und -haptik", "Schleif- und polierbar", "Spröder als Standard-PLA", "Leicht abrasiv"),
+            listOf("Deko", "Skulpturen", "Vasen", "Architekturmodelle"),
         ),
         MaterialSpec(
             "316L / 17-4PH", "Sinterbares Edelstahl-Filament (z.B. BASF Ultrafuse)", "Faserverstärkte & Verbund-Filamente", "FDM",
@@ -223,10 +271,48 @@ object MaterialCatalog {
             listOf("Chirurgische Instrumente", "Medizintechnik", "Heißwasser-Armaturen"),
         ),
         MaterialSpec(
+            "PSU", "Polysulfon", "Hochleistungs-Polymere", "FDM",
+            340, 380, 120, 150, true,
+            listOf("Hohe Transparenz (bernsteinfarben) trotz Hochtemperaturbeständigkeit", "Hydrolysebeständig", "Erfordert aktiv beheizten Bauraum (>80°C)"),
+            listOf("Medizintechnik", "Heißwasserarmaturen", "Elektroisolierteile"),
+        ),
+        MaterialSpec(
+            "PPS", "Polyphenylensulfid", "Hochleistungs-Polymere", "FDM",
+            310, 350, 100, 130, true,
+            listOf("Extrem hohe Chemikalien- und Hydrolysebeständigkeit", "Von Natur aus flammhemmend", "Sehr geringe Feuchtigkeitsaufnahme", "Hohes Warping ohne Heizkammer"),
+            listOf("Automobil-Unterhauben-Bauteile", "Pumpen- und Ventilkomponenten", "Halbleiterfertigung"),
+        ),
+        MaterialSpec(
             "PVDF", "Polyvinylidenfluorid", "Hochleistungs-Polymere", "FDM",
             240, 265, 90, 110, true,
             listOf("Fluorpolymer mit extremer Beständigkeit gegen Säuren, Basen und Lösungsmittel", "UV- und strahlungsbeständig", "Flammhemmend"),
             listOf("Chemische Industrie", "Pumpenbauteile", "Reinstwasser-Anlagen"),
+        ),
+
+        // Spezial- & Funktionsfilamente (FDM)
+        MaterialSpec(
+            "LW-PLA / LW-ASA", "Aufschäumendes Leichtbau-Filament", "Spezial- & Funktionsfilamente", "FDM",
+            220, 260, 50, 95, false,
+            listOf("Schäumt bei hoher Düsentemperatur auf und reduziert so das Bauteilgewicht", "Düsentemperatur steuert direkt den Aufschäumgrad/die Dichte", "Geringere Festigkeit als unaufgeschäumtes Material"),
+            listOf("Leichtbau-Flugmodelle", "Große Modelle mit wenig Materialeinsatz", "Füllung dickwandiger Bereiche"),
+        ),
+        MaterialSpec(
+            "ESD-Filamente", "Elektrostatisch ableitendes Filament (Basispolymer variiert)", "Spezial- & Funktionsfilamente", "FDM",
+            230, 400, 75, 140, true,
+            listOf("Elektrisch ableitfähig (Oberflächenwiderstand im ESD-Bereich)", "Temperatur- und Betteinstellungen richten sich nach dem jeweiligen Basispolymer (PETG, ABS, PA12, PC, PEEK)", "Meist mit Carbon- oder Ruß-Additiv eingefärbt (schwarz)"),
+            listOf("Gehäuse und Werkzeuge für die Elektronikfertigung", "Tablett- und Trägerstrukturen für Reinräume", "Halbleiter-Handhabungstechnik"),
+        ),
+        MaterialSpec(
+            "PCL", "Polycaprolacton (Niedrigtemperatur-Thermoplast)", "Spezial- & Funktionsfilamente", "FDM",
+            70, 100, 30, 45, false,
+            listOf("Sehr niedriger Schmelzpunkt, teils sogar handformbar nach Erwärmen", "Biologisch abbaubar", "Geringe mechanische Festigkeit"),
+            listOf("Schulprojekte und Einsteiger-3D-Druck ohne Hochtemperatur-Hotend", "Formbare Bastel- und Reparaturteile", "Medizinische Modelle"),
+        ),
+        MaterialSpec(
+            "PHA", "Polyhydroxyalkanoate (biologisch abbaubar)", "Spezial- & Funktionsfilamente", "FDM",
+            190, 215, 40, 60, false,
+            listOf("Vollständig biologisch abbaubar (auch im Kompost/Meerwasser)", "Druckverhalten ähnlich PLA", "Höhere Schlagzähigkeit als Standard-PLA"),
+            listOf("Verpackungsprototypen", "Einwegartikel", "Nachhaltigkeitsprojekte"),
         ),
 
         // Lösliche & Abreißbare Stützmaterialien (Support FDM)

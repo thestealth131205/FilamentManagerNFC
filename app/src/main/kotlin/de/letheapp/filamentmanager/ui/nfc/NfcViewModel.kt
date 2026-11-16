@@ -28,8 +28,15 @@ sealed interface NfcScreenState {
     /** Erster von zwei Chips erfolgreich beschrieben – wartet auf Bestätigung, bevor der zweite Chip angefordert wird. */
     data class FirstTagWritten(val filament: FilamentEntity, val firstTagUid: String, val totalCopies: Int) : NfcScreenState
     data class WriteSuccess(val tagUids: List<String>, val filament: FilamentEntity) : NfcScreenState
+
+    /** Wartet auf den Tag-Kontakt für eine Tools-Aktion ([ToolAction]) – siehe [de.letheapp.filamentmanager.data.nfc.NfcMode]. */
+    data class WaitingTool(val action: ToolAction) : NfcScreenState
+    data class ToolActionDone(val message: NfcMessage) : NfcScreenState
     data class Error(val message: NfcMessage) : NfcScreenState
 }
+
+/** Welche Tools-Aktion gerade auf einen Tag wartet – bestimmt den Warte-Text im Screen. */
+enum class ToolAction { WRITE_URL, LOCK, UNLOCK, SET_PASSWORD, CLEAR_PASSWORD }
 
 /**
  * Bindeglied zwischen [NfcBridge] (reine Hardware-/Byte-Ebene) und der Datenbank:
@@ -94,6 +101,36 @@ class NfcViewModel(private val database: AppDatabase) : ViewModel() {
         NfcBridge.setMode(NfcMode.Idle)
     }
 
+    /** Schreibt beim nächsten Tag-Kontakt eine NDEF-URL, die sich beim Lesen automatisch öffnet ("Tools"-Modus). */
+    fun writeUrl(url: String) {
+        _screenState.value = NfcScreenState.WaitingTool(ToolAction.WRITE_URL)
+        NfcBridge.setMode(NfcMode.WriteUrl(url))
+    }
+
+    /** Aktiviert den NTAG-Schreibschutz mit [password] (ASCII, auf 4 Byte aufgefüllt/gekürzt). */
+    fun lockTag(password: String) {
+        _screenState.value = NfcScreenState.WaitingTool(ToolAction.LOCK)
+        NfcBridge.setMode(NfcMode.LockTag(password.toTagPassword()))
+    }
+
+    /** Hebt den Schreibschutz wieder auf – [password] muss das aktuell gültige Passwort sein. */
+    fun unlockTag(password: String) {
+        _screenState.value = NfcScreenState.WaitingTool(ToolAction.UNLOCK)
+        NfcBridge.setMode(NfcMode.UnlockTag(password.toTagPassword()))
+    }
+
+    /** Hinterlegt ein neues Passwort, ohne den Schreibschutz zu aktivieren – Tag muss aktuell entsperrt sein. */
+    fun setPassword(password: String) {
+        _screenState.value = NfcScreenState.WaitingTool(ToolAction.SET_PASSWORD)
+        NfcBridge.setMode(NfcMode.SetPassword(password.toTagPassword()))
+    }
+
+    /** Setzt das Passwort auf Werksvorgabe zurück – Tag muss aktuell entsperrt sein. */
+    fun clearPassword() {
+        _screenState.value = NfcScreenState.WaitingTool(ToolAction.CLEAR_PASSWORD)
+        NfcBridge.setMode(NfcMode.ClearPassword)
+    }
+
     /** Zurück zur Auswahl/Startansicht, Reader-Mode wieder in den Leerlauf versetzen. */
     fun reset() {
         firstTagUidOfCurrentWrite = null
@@ -150,12 +187,24 @@ class NfcViewModel(private val database: AppDatabase) : ViewModel() {
                 }
                 NfcBridge.clearEvent()
             }
+            is NfcEvent.ToolSuccess -> {
+                _screenState.value = NfcScreenState.ToolActionDone(event.message)
+                NfcBridge.clearEvent()
+            }
             is NfcEvent.Error -> {
                 _screenState.value = NfcScreenState.Error(event.message)
                 NfcBridge.clearEvent()
             }
         }
     }
+}
+
+/** ASCII-Passwort auf genau 4 Byte normiert (gekürzt bzw. rechtsseitig mit 0x00 aufgefüllt). */
+private fun String.toTagPassword(): ByteArray {
+    val bytes = ByteArray(4)
+    val src = toByteArray(Charsets.US_ASCII)
+    System.arraycopy(src, 0, bytes, 0, minOf(src.size, 4))
+    return bytes
 }
 
 private fun FilamentEntity.toAceTagData() = AceTagData(

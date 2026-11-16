@@ -12,17 +12,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -40,12 +46,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.letheapp.filamentmanager.R
 import de.letheapp.filamentmanager.data.db.FilamentEntity
 import de.letheapp.filamentmanager.data.nfc.AceTagData
 import de.letheapp.filamentmanager.data.nfc.NfcMessage
+import de.letheapp.filamentmanager.data.prefs.ToolModePrefs
 import de.letheapp.filamentmanager.ui.scan.ScanDraftHolder
 
 /**
@@ -64,6 +72,9 @@ fun NfcScreen(
     var writeTwoTags by remember { mutableStateOf(false) }
     val screenState by viewModel.screenState.collectAsState()
     val ccWarning by viewModel.ccWarning.collectAsState()
+    val context = LocalContext.current
+    var toolsEnabled by remember { mutableStateOf(ToolModePrefs.isEnabled(context)) }
+    var showToolsDialog by remember { mutableStateOf(false) }
 
     // Verlässt der Nutzer den Screen (anderer Bottom-Tab), darf der Reader-Mode
     // nicht im "Schreiben"-Modus auf dem nächsten zufällig aufgelegten Tag landen.
@@ -71,7 +82,29 @@ fun NfcScreen(
         onDispose { viewModel.reset() }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.nfc_title)) }) }) { padding ->
+    if (showToolsDialog) {
+        ToolsDialog(
+            enabled = toolsEnabled,
+            onEnabledChange = {
+                toolsEnabled = it
+                ToolModePrefs.setEnabled(context, it)
+            },
+            onDismiss = { showToolsDialog = false },
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.nfc_title)) },
+                actions = {
+                    IconButton(onClick = { showToolsDialog = true }) {
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.nfc_tools_menu))
+                    }
+                },
+            )
+        },
+    ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             TabRow(selectedTabIndex = tab) {
                 Tab(
@@ -103,6 +136,17 @@ fun NfcScreen(
                             }
                             viewModel.reset()
                         },
+                    )
+                } else if (toolsEnabled) {
+                    ToolWriteTab(
+                        state = screenState,
+                        onWriteUrl = viewModel::writeUrl,
+                        onLock = viewModel::lockTag,
+                        onUnlock = viewModel::unlockTag,
+                        onSetPassword = viewModel::setPassword,
+                        onClearPassword = viewModel::clearPassword,
+                        onCancel = viewModel::reset,
+                        onDone = viewModel::reset,
                     )
                 } else {
                     WriteTab(
@@ -234,6 +278,153 @@ private fun WriteTab(
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(filaments, key = { it.id }) { filament ->
                         FilamentPickRow(filament, onClick = { onSelectFilament(filament) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolsDialog(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.nfc_tools_dialog_title)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.nfc_tools_dialog_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(stringResource(R.string.nfc_tools_dialog_switch), modifier = Modifier.padding(end = 12.dp))
+                    Switch(checked = enabled, onCheckedChange = onEnabledChange)
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text(stringResource(R.string.nfc_tools_dialog_close)) }
+        },
+    )
+}
+
+@Composable
+private fun ToolWriteTab(
+    state: NfcScreenState,
+    onWriteUrl: (String) -> Unit,
+    onLock: (String) -> Unit,
+    onUnlock: (String) -> Unit,
+    onSetPassword: (String) -> Unit,
+    onClearPassword: () -> Unit,
+    onCancel: () -> Unit,
+    onDone: () -> Unit,
+) {
+    when (state) {
+        is NfcScreenState.WaitingTool -> WaitingCard(
+            text = stringResource(
+                when (state.action) {
+                    ToolAction.WRITE_URL -> R.string.nfc_tool_waiting_write_url
+                    ToolAction.LOCK -> R.string.nfc_tool_waiting_lock
+                    ToolAction.UNLOCK -> R.string.nfc_tool_waiting_unlock
+                    ToolAction.SET_PASSWORD -> R.string.nfc_tool_waiting_set_password
+                    ToolAction.CLEAR_PASSWORD -> R.string.nfc_tool_waiting_clear_password
+                },
+            ),
+            onCancel = onCancel,
+        )
+        is NfcScreenState.ToolActionDone -> MessageCard(
+            title = stringResource(R.string.nfc_write_success_title),
+            body = state.message.resolve(),
+        ) {
+            Button(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.nfc_ok))
+            }
+        }
+        is NfcScreenState.Error -> ErrorCard(state.message, onCancel)
+        else -> {
+            var url by remember { mutableStateOf("") }
+            var password by remember { mutableStateOf("") }
+            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.nfc_tool_write_intro), modifier = Modifier.padding(bottom = 16.dp))
+                Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.nfc_tool_url_title), style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            stringResource(R.string.nfc_tool_url_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                        )
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = { url = it },
+                            label = { Text(stringResource(R.string.nfc_tool_url_label)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        )
+                        Button(
+                            onClick = { onWriteUrl(url) },
+                            enabled = url.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.nfc_tool_url_button))
+                        }
+                    }
+                }
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.nfc_tool_password_title), style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            stringResource(R.string.nfc_tool_password_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                        )
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            label = { Text(stringResource(R.string.nfc_tool_password_label)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        ) {
+                            Button(
+                                onClick = { onLock(password) },
+                                enabled = password.isNotBlank(),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(stringResource(R.string.nfc_tool_lock_button))
+                            }
+                            OutlinedButton(
+                                onClick = { onUnlock(password) },
+                                enabled = password.isNotBlank(),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(stringResource(R.string.nfc_tool_unlock_button))
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = { onSetPassword(password) },
+                                enabled = password.isNotBlank(),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(stringResource(R.string.nfc_tool_set_password_button))
+                            }
+                            OutlinedButton(onClick = onClearPassword, modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.nfc_tool_clear_password_button))
+                            }
+                        }
                     }
                 }
             }

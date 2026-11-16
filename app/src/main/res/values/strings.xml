@@ -88,6 +88,38 @@
     <string name="nfc_error_verify_failed">Write incomplete – read-back does not match. Place the tag again and retry.</string>
     <string name="nfc_warning_cc_mismatch">Unexpected capability container (page 3): %1$s instead of %2$s – probably not an NTAG215, or the tag is damaged.</string>
 
+    <string name="nfc_tools_menu">Tools</string>
+    <string name="nfc_tools_dialog_title">Tools</string>
+    <string name="nfc_tools_dialog_desc">Enables extra tag functions beyond spool data: an auto-opening URL, and NTAG password protection (lock/unlock, set/clear password). The “Write” tab switches to these tools while enabled.</string>
+    <string name="nfc_tools_dialog_switch">Enable advanced tools</string>
+    <string name="nfc_tools_dialog_close">Close</string>
+
+    <string name="nfc_tool_write_intro">Advanced tools write functions other than spool data to the tag. Each tag holds either spool data or one of these tools, never both at once.</string>
+    <string name="nfc_tool_url_title">Write URL tag</string>
+    <string name="nfc_tool_url_desc">Writes a standard NDEF URL record. Opens automatically when read by any NFC-capable phone, not just this app.</string>
+    <string name="nfc_tool_url_label">URL</string>
+    <string name="nfc_tool_url_button">Write to tag</string>
+    <string name="nfc_tool_password_title">Password protection</string>
+    <string name="nfc_tool_password_desc">Standard NTAG feature, protects writing only (reading stays open, so the printer/AMS can still read the tag). Password: up to 4 ASCII characters. To change a password, unlock first, then set the new one.</string>
+    <string name="nfc_tool_password_label">Password (up to 4 characters)</string>
+    <string name="nfc_tool_lock_button">Lock</string>
+    <string name="nfc_tool_unlock_button">Unlock</string>
+    <string name="nfc_tool_set_password_button">Set password</string>
+    <string name="nfc_tool_clear_password_button">Clear password</string>
+    <string name="nfc_tool_waiting_write_url">Writing URL tag – hold the tag against the back of the phone…</string>
+    <string name="nfc_tool_waiting_lock">Locking tag – hold the tag against the back of the phone…</string>
+    <string name="nfc_tool_waiting_unlock">Unlocking tag – hold the tag against the back of the phone…</string>
+    <string name="nfc_tool_waiting_set_password">Setting password – hold the tag against the back of the phone…</string>
+    <string name="nfc_tool_waiting_clear_password">Clearing password – hold the tag against the back of the phone…</string>
+    <string name="nfc_tool_url_success">URL tag written and verified. It will open automatically when read.</string>
+    <string name="nfc_tool_lock_success">Tag locked. Writing now requires the password; reading stays open.</string>
+    <string name="nfc_tool_unlock_success">Tag unlocked – writing no longer requires a password.</string>
+    <string name="nfc_tool_set_password_success">Password set.</string>
+    <string name="nfc_tool_clear_password_success">Password cleared (reset to factory default).</string>
+    <string name="nfc_tool_error_url_too_long">URL is too long for the tag (max. %1$s characters).</string>
+    <string name="nfc_tool_error_locked_or_auth">Not possible – the tag is still locked. Unlock it first with the current password.</string>
+    <string name="nfc_tool_error_wrong_password">Wrong password for this tag.</string>
+
     <string name="scan_title">Scan label</string>
     <string name="scan_permission_missing">Camera permission is required to scan labels.</string>
     <string name="scan_permission_request">Grant permission</string>

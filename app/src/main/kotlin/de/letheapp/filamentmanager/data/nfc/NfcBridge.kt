@@ -27,6 +27,26 @@ sealed interface NfcMode {
         val totalCopies: Int = 1,
         val previousTagUids: Set<String> = emptySet(),
     ) : NfcMode
+
+    /**
+     * "Tools"-Modus (Zahnradmenü im NFC-Screen) – Funktionen jenseits des ACE-Filamentformats,
+     * siehe PLAN.md "Passwortschutz": schreiben eine NDEF-URL bzw. verwalten NTAG-Passwortschutz
+     * (Standard-NTAG-Feature, nicht ACE-spezifisch). Passwörter sind ASCII, rechtsseitig auf
+     * genau 4 Byte mit 0x00 aufgefüllt bzw. abgeschnitten (siehe `String.toTagPassword()`).
+     */
+    data class WriteUrl(val url: String) : NfcMode
+
+    /** Setzt PWD/PACK neu und aktiviert Schreibschutz (AUTH0) – erfordert einen aktuell entsperrten Tag. */
+    data class LockTag(val password: ByteArray) : NfcMode
+
+    /** Authentifiziert mit [password] und hebt den Schreibschutz wieder auf (AUTH0=0xFF). */
+    data class UnlockTag(val password: ByteArray) : NfcMode
+
+    /** Schreibt PWD/PACK ohne den Schreibschutz zu ändern – erfordert einen aktuell entsperrten Tag. */
+    data class SetPassword(val password: ByteArray) : NfcMode
+
+    /** Setzt PWD/PACK auf Werksvorgabe zurück – erfordert einen aktuell entsperrten Tag. */
+    data object ClearPassword : NfcMode
 }
 
 /**
@@ -46,6 +66,9 @@ sealed interface NfcEvent {
         val copyIndex: Int = 1,
         val totalCopies: Int = 1,
     ) : NfcEvent
+
+    /** Ergebnis einer Tools-Aktion ([NfcMode.WriteUrl]/[NfcMode.LockTag]/etc.) – [message] trägt den Erfolgstext. */
+    data class ToolSuccess(val tagUid: String, val message: NfcMessage) : NfcEvent
     data class Error(val message: NfcMessage) : NfcEvent
 }
 
@@ -108,6 +131,11 @@ object NfcBridge {
             when (currentMode) {
                 is NfcMode.Reading -> handleRead(nfcA, uid)
                 is NfcMode.Writing -> handleWrite(nfcA, uid, currentMode)
+                is NfcMode.WriteUrl -> handleWriteUrl(nfcA, uid, currentMode)
+                is NfcMode.LockTag -> handleLockTag(nfcA, uid, currentMode)
+                is NfcMode.UnlockTag -> handleUnlockTag(nfcA, uid, currentMode)
+                is NfcMode.SetPassword -> handleSetPassword(nfcA, uid, currentMode)
+                NfcMode.ClearPassword -> handleClearPassword(nfcA, uid)
                 NfcMode.Idle -> Unit
             }
         } catch (e: Exception) {
@@ -142,6 +170,91 @@ object NfcBridge {
             _event.value = NfcEvent.WriteSuccess(uid, mode.filamentId, mode.copyIndex, mode.totalCopies)
         } else {
             _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_error_verify_failed))
+        }
+    }
+
+    private fun handleWriteUrl(nfcA: NfcA, uid: String, mode: NfcMode.WriteUrl) {
+        val pages = try {
+            NdefUriCodec.encodeUrlMessage(mode.url)
+        } catch (e: NdefUriCodec.UrlTooLongException) {
+            _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_url_too_long, listOf(e.maxUrlLength.toString())))
+            return
+        }
+        AceTagIo.writePages(nfcA, pages)
+        val verifyRaw = AceTagIo.readAllPages(nfcA)
+        if (AceTagCodec.verify(verifyRaw, pages)) {
+            _event.value = NfcEvent.ToolSuccess(uid, NfcMessage(R.string.nfc_tool_url_success))
+        } else {
+            _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_error_verify_failed))
+        }
+    }
+
+    /**
+     * Schreibreihenfolge wichtig: PWD/PACK/ACCESS zuerst, AUTH0 (Page [NtagType.cfgStartPage]) zuletzt –
+     * so bleibt der Tag bis zum letzten Write unverändert "offen" (AUTH0=0xFF) und keiner dieser
+     * vorbereitenden Writes braucht selbst schon eine Authentifizierung.
+     */
+    private fun handleLockTag(nfcA: NfcA, uid: String, mode: NfcMode.LockTag) {
+        val result = runCatching {
+            val type = AceTagIo.detectNtagType(nfcA)
+            val cfgStart = type.cfgStartPage
+            AceTagIo.writePage(nfcA, cfgStart + 2, mode.password)
+            val currentPack = AceTagIo.readPage(nfcA, cfgStart + 3)
+            AceTagIo.writePage(nfcA, cfgStart + 3, byteArrayOf(0, 0, currentPack[2], currentPack[3]))
+            val currentAccess = AceTagIo.readPage(nfcA, cfgStart + 1)
+            AceTagIo.writePage(nfcA, cfgStart + 1, byteArrayOf(0x00, currentAccess[1], currentAccess[2], currentAccess[3]))
+            val currentCfg0 = AceTagIo.readPage(nfcA, cfgStart)
+            AceTagIo.writePage(nfcA, cfgStart, byteArrayOf(currentCfg0[0], currentCfg0[1], currentCfg0[2], 0x04))
+        }
+        _event.value = if (result.isSuccess) {
+            NfcEvent.ToolSuccess(uid, NfcMessage(R.string.nfc_tool_lock_success))
+        } else {
+            NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_locked_or_auth))
+        }
+    }
+
+    private fun handleUnlockTag(nfcA: NfcA, uid: String, mode: NfcMode.UnlockTag) {
+        if (!AceTagIo.authenticate(nfcA, mode.password)) {
+            _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_wrong_password))
+            return
+        }
+        val result = runCatching {
+            val cfgStart = AceTagIo.detectNtagType(nfcA).cfgStartPage
+            val currentCfg0 = AceTagIo.readPage(nfcA, cfgStart)
+            AceTagIo.writePage(nfcA, cfgStart, byteArrayOf(currentCfg0[0], currentCfg0[1], currentCfg0[2], 0xFF.toByte()))
+        }
+        _event.value = if (result.isSuccess) {
+            NfcEvent.ToolSuccess(uid, NfcMessage(R.string.nfc_tool_unlock_success))
+        } else {
+            NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_locked_or_auth))
+        }
+    }
+
+    private fun handleSetPassword(nfcA: NfcA, uid: String, mode: NfcMode.SetPassword) {
+        val result = runCatching {
+            val cfgStart = AceTagIo.detectNtagType(nfcA).cfgStartPage
+            AceTagIo.writePage(nfcA, cfgStart + 2, mode.password)
+            val currentPack = AceTagIo.readPage(nfcA, cfgStart + 3)
+            AceTagIo.writePage(nfcA, cfgStart + 3, byteArrayOf(0, 0, currentPack[2], currentPack[3]))
+        }
+        _event.value = if (result.isSuccess) {
+            NfcEvent.ToolSuccess(uid, NfcMessage(R.string.nfc_tool_set_password_success))
+        } else {
+            NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_locked_or_auth))
+        }
+    }
+
+    private fun handleClearPassword(nfcA: NfcA, uid: String) {
+        val result = runCatching {
+            val cfgStart = AceTagIo.detectNtagType(nfcA).cfgStartPage
+            AceTagIo.writePage(nfcA, cfgStart + 2, byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()))
+            val currentPack = AceTagIo.readPage(nfcA, cfgStart + 3)
+            AceTagIo.writePage(nfcA, cfgStart + 3, byteArrayOf(0, 0, currentPack[2], currentPack[3]))
+        }
+        _event.value = if (result.isSuccess) {
+            NfcEvent.ToolSuccess(uid, NfcMessage(R.string.nfc_tool_clear_password_success))
+        } else {
+            NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_locked_or_auth))
         }
     }
 }
