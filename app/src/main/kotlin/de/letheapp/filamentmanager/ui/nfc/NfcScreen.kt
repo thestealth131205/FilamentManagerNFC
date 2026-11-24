@@ -455,7 +455,7 @@ private fun FilamentPickRow(filament: FilamentEntity, onClick: () -> Unit) {
     }
 }
 
-/** Nicht-blockierender Hinweis, falls Page 3 (Capability Container) nicht dem erwarteten NTAG215-Wert entspricht. */
+/** Nicht-blockierender Hinweis, falls Page 3 (Capability Container) keinem bekannten NTAG213/215/216-Wert entspricht. */
 @Composable
 private fun NfcMessage.resolve(): String = stringResource(resId, *args.toTypedArray())
 

@@ -219,6 +219,8 @@ object AnycubicSkuCatalog {
     private val colorWordTokens: Map<String, String> = mapOf(
         "weiss" to "WHITE", "white" to "WHITE",
         "schwarz" to "BLACK", "black" to "BLACK",
+        "midnight" to "BLACK", "mitternacht" to "BLACK", "mitternachtsblau" to "BLACK", "mitternachtsschwarz" to "BLACK",
+        "onyx" to "BLACK", "jet" to "BLACK", "ebony" to "BLACK",
         "grau" to "GREY", "grey" to "GREY", "gray" to "GREY", "charcoal" to "GREY", "anthracite" to "GREY",
         "silber" to "SILVER", "silver" to "SILVER",
         "rot" to "RED", "red" to "RED", "scarlet" to "RED", "crimson" to "RED",

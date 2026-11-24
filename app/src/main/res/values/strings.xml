@@ -86,7 +86,7 @@
     <string name="nfc_error_communication">Tag communication error: %1$s</string>
     <string name="nfc_error_same_chip">This is the same chip as in the previous write (UID %1$s). Place a different, physically separate tag for the second chip.</string>
     <string name="nfc_error_verify_failed">Write incomplete – read-back does not match. Place the tag again and retry.</string>
-    <string name="nfc_warning_cc_mismatch">Unexpected capability container (page 3): %1$s instead of %2$s – probably not an NTAG215, or the tag is damaged.</string>
+    <string name="nfc_warning_cc_mismatch">Unexpected capability container (page 3): %1$s – expected one of %2$s. Probably not an NTAG213/215/216, or the tag is damaged.</string>
 
     <string name="nfc_tools_menu">Tools</string>
     <string name="nfc_tools_dialog_title">Tools</string>
@@ -119,6 +119,7 @@
     <string name="nfc_tool_error_url_too_long">URL is too long for the tag (max. %1$s characters).</string>
     <string name="nfc_tool_error_locked_or_auth">Not possible – the tag is still locked. Unlock it first with the current password.</string>
     <string name="nfc_tool_error_wrong_password">Wrong password for this tag.</string>
+    <string name="nfc_tool_error_unknown_tag_type">Tag type not recognized – password functions only work on NTAG213, NTAG215 and NTAG216.</string>
 
     <string name="scan_title">Scan label</string>
     <string name="scan_permission_missing">Camera permission is required to scan labels.</string>

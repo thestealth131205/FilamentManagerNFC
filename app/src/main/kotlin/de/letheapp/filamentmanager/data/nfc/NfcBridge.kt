@@ -125,17 +125,16 @@ object NfcBridge {
         try {
             nfcA.connect()
             nfcA.timeout = 2000
-            _ccWarning.value = runCatching { AceTagIo.readCapabilityContainer(nfcA) }
-                .getOrNull()
-                ?.let { AceTagCodec.ccMismatchWarning(it) }
+            val cc = runCatching { AceTagIo.readCapabilityContainer(nfcA) }.getOrNull()
+            _ccWarning.value = cc?.let { AceTagCodec.ccMismatchWarning(it) }
             when (currentMode) {
                 is NfcMode.Reading -> handleRead(nfcA, uid)
                 is NfcMode.Writing -> handleWrite(nfcA, uid, currentMode)
-                is NfcMode.WriteUrl -> handleWriteUrl(nfcA, uid, currentMode)
-                is NfcMode.LockTag -> handleLockTag(nfcA, uid, currentMode)
-                is NfcMode.UnlockTag -> handleUnlockTag(nfcA, uid, currentMode)
-                is NfcMode.SetPassword -> handleSetPassword(nfcA, uid, currentMode)
-                NfcMode.ClearPassword -> handleClearPassword(nfcA, uid)
+                is NfcMode.WriteUrl -> handleWriteUrl(nfcA, uid, cc, currentMode)
+                is NfcMode.LockTag -> handleLockTag(nfcA, uid, cc, currentMode)
+                is NfcMode.UnlockTag -> handleUnlockTag(nfcA, uid, cc, currentMode)
+                is NfcMode.SetPassword -> handleSetPassword(nfcA, uid, cc, currentMode)
+                NfcMode.ClearPassword -> handleClearPassword(nfcA, uid, cc)
                 NfcMode.Idle -> Unit
             }
         } catch (e: Exception) {
@@ -173,15 +172,27 @@ object NfcBridge {
         }
     }
 
-    private fun handleWriteUrl(nfcA: NfcA, uid: String, mode: NfcMode.WriteUrl) {
+    /**
+     * Platz für die URL richtet sich nach dem erkannten Chip (NTAG213: 144 B, NTAG215: 496 B,
+     * NTAG216: 872 B), unbekannter Typ -> sichere 144 B. Ein nie NDEF-formatierter Tag (CC = 00 00 00 00)
+     * bekommt vorher den passenden werkseitigen CC, sonst erkennen andere Handys die URL nicht.
+     * Page 3 ist OTP (Bits lassen sich nur setzen) – deshalb ausschließlich bei komplett leerem CC.
+     */
+    private fun handleWriteUrl(nfcA: NfcA, uid: String, cc: ByteArray?, mode: NfcMode.WriteUrl) {
+        // Für den NDEF-Platz zählt, was der CC anderen Lesegeräten ankündigt – GET_VERSION nur bei leerem/unbekanntem CC.
+        val type = NtagType.fromCapabilityContainer(cc) ?: AceTagIo.detectNtagType(nfcA, cc)
         val pages = try {
-            NdefUriCodec.encodeUrlMessage(mode.url)
+            NdefUriCodec.encodeUrlMessage(mode.url, type?.userBytes ?: AceTagCodec.TOTAL_BYTES)
         } catch (e: NdefUriCodec.UrlTooLongException) {
             _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_url_too_long, listOf(e.maxUrlLength.toString())))
             return
         }
+        if (type != null && cc != null && cc.size >= 4 && cc.take(4).all { it == 0.toByte() }) {
+            AceTagIo.writePage(nfcA, CC_PAGE, type.capabilityContainer)
+            _ccWarning.value = null
+        }
         AceTagIo.writePages(nfcA, pages)
-        val verifyRaw = AceTagIo.readAllPages(nfcA)
+        val verifyRaw = AceTagIo.readBytes(nfcA, AceTagCodec.FIRST_PAGE, pages.size * 4)
         if (AceTagCodec.verify(verifyRaw, pages)) {
             _event.value = NfcEvent.ToolSuccess(uid, NfcMessage(R.string.nfc_tool_url_success))
         } else {
@@ -194,10 +205,9 @@ object NfcBridge {
      * so bleibt der Tag bis zum letzten Write unverändert "offen" (AUTH0=0xFF) und keiner dieser
      * vorbereitenden Writes braucht selbst schon eine Authentifizierung.
      */
-    private fun handleLockTag(nfcA: NfcA, uid: String, mode: NfcMode.LockTag) {
+    private fun handleLockTag(nfcA: NfcA, uid: String, cc: ByteArray?, mode: NfcMode.LockTag) {
+        val cfgStart = requireCfgStart(nfcA, cc) ?: return
         val result = runCatching {
-            val type = AceTagIo.detectNtagType(nfcA)
-            val cfgStart = type.cfgStartPage
             AceTagIo.writePage(nfcA, cfgStart + 2, mode.password)
             val currentPack = AceTagIo.readPage(nfcA, cfgStart + 3)
             AceTagIo.writePage(nfcA, cfgStart + 3, byteArrayOf(0, 0, currentPack[2], currentPack[3]))
@@ -213,13 +223,14 @@ object NfcBridge {
         }
     }
 
-    private fun handleUnlockTag(nfcA: NfcA, uid: String, mode: NfcMode.UnlockTag) {
+    /** Typ vor `PWD_AUTH` bestimmen: nach einem fehlgeschlagenen Auth (NAK) antwortet der Tag bis zum Neuauflegen nicht mehr. */
+    private fun handleUnlockTag(nfcA: NfcA, uid: String, cc: ByteArray?, mode: NfcMode.UnlockTag) {
+        val cfgStart = requireCfgStart(nfcA, cc) ?: return
         if (!AceTagIo.authenticate(nfcA, mode.password)) {
             _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_wrong_password))
             return
         }
         val result = runCatching {
-            val cfgStart = AceTagIo.detectNtagType(nfcA).cfgStartPage
             val currentCfg0 = AceTagIo.readPage(nfcA, cfgStart)
             AceTagIo.writePage(nfcA, cfgStart, byteArrayOf(currentCfg0[0], currentCfg0[1], currentCfg0[2], 0xFF.toByte()))
         }
@@ -230,9 +241,9 @@ object NfcBridge {
         }
     }
 
-    private fun handleSetPassword(nfcA: NfcA, uid: String, mode: NfcMode.SetPassword) {
+    private fun handleSetPassword(nfcA: NfcA, uid: String, cc: ByteArray?, mode: NfcMode.SetPassword) {
+        val cfgStart = requireCfgStart(nfcA, cc) ?: return
         val result = runCatching {
-            val cfgStart = AceTagIo.detectNtagType(nfcA).cfgStartPage
             AceTagIo.writePage(nfcA, cfgStart + 2, mode.password)
             val currentPack = AceTagIo.readPage(nfcA, cfgStart + 3)
             AceTagIo.writePage(nfcA, cfgStart + 3, byteArrayOf(0, 0, currentPack[2], currentPack[3]))
@@ -244,9 +255,9 @@ object NfcBridge {
         }
     }
 
-    private fun handleClearPassword(nfcA: NfcA, uid: String) {
+    private fun handleClearPassword(nfcA: NfcA, uid: String, cc: ByteArray?) {
+        val cfgStart = requireCfgStart(nfcA, cc) ?: return
         val result = runCatching {
-            val cfgStart = AceTagIo.detectNtagType(nfcA).cfgStartPage
             AceTagIo.writePage(nfcA, cfgStart + 2, byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()))
             val currentPack = AceTagIo.readPage(nfcA, cfgStart + 3)
             AceTagIo.writePage(nfcA, cfgStart + 3, byteArrayOf(0, 0, currentPack[2], currentPack[3]))
@@ -257,4 +268,19 @@ object NfcBridge {
             NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_locked_or_auth))
         }
     }
+
+    /**
+     * Erste Config-Page (CFG0/AUTH0) des erkannten Chips – NTAG213: 41, NTAG215: 131, NTAG216: 227.
+     * Unbekannter Typ -> Fehlermeldung statt Raten, sonst landen PWD/AUTH0 im User-Memory bzw. auf
+     * falschen Pages und der Tag wäre ohne erkennbaren Grund gesperrt oder beschädigt.
+     */
+    private fun requireCfgStart(nfcA: NfcA, cc: ByteArray?): Int? {
+        val type = AceTagIo.detectNtagType(nfcA, cc)
+        if (type == null) {
+            _event.value = NfcEvent.Error(NfcMessage(R.string.nfc_tool_error_unknown_tag_type))
+        }
+        return type?.cfgStartPage
+    }
+
+    private const val CC_PAGE = 3
 }

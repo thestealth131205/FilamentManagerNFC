@@ -29,20 +29,24 @@ object AceTagCodec {
     const val LAST_PAGE = 36
     const val TOTAL_BYTES = (LAST_PAGE - FIRST_PAGE + 4) * 4
 
-    /** Page 3 (Capability Container) eines unbeschädigten, frischen NTAG215. */
-    val NTAG215_CC = byteArrayOf(0xE1.toByte(), 0x10, 0x3E, 0x00)
-
     /**
-     * Prüft Page 3 gegen den erwarteten NTAG215-CC-Wert – nur eine Warnung, kein Abbruch:
-     * Ein abweichender Wert deutet auf einen anderen Tag-Typ oder einen beschädigten Tag hin,
-     * verhindert das Lesen/Schreiben unserer eigenen Daten-Pages (ab Page 4) aber nicht.
+     * Prüft Page 3 gegen die werkseitigen CC-Werte von NTAG213/215/216 ([NtagType.capabilityContainer]) –
+     * nur eine Warnung, kein Abbruch: Ein abweichender Wert deutet auf einen anderen Tag-Typ oder einen
+     * beschädigten Tag hin, verhindert das Lesen/Schreiben unserer eigenen Daten-Pages (ab Page 4) aber nicht.
+     * Ein komplett leerer CC (00 00 00 00, nie NDEF-formatiert) ist ebenfalls kein Fehler – er wird beim
+     * Schreiben einer URL passend zum erkannten Typ gesetzt (siehe `NfcBridge.handleWriteUrl`).
      */
     fun ccMismatchWarning(cc: ByteArray): NfcMessage? {
-        if (cc.size < 4 || cc.contentEquals(NTAG215_CC)) return null
-        val actualHex = cc.take(4).joinToString(" ") { "%02X".format(it) }
-        val expectedHex = NTAG215_CC.joinToString(" ") { "%02X".format(it) }
+        if (cc.size < 4) return null
+        val head = cc.copyOf(4)
+        if (head.all { it == 0.toByte() }) return null
+        if (NtagType.entries.any { it.capabilityContainer.contentEquals(head) }) return null
+        val actualHex = head.toHex()
+        val expectedHex = NtagType.entries.joinToString(" / ") { "${it.capabilityContainer.toHex()} (${it.name})" }
         return NfcMessage(R.string.nfc_warning_cc_mismatch, listOf(actualHex, expectedHex))
     }
+
+    private fun ByteArray.toHex(): String = joinToString(" ") { "%02X".format(it) }
 
     private val HEADER = byteArrayOf(0x7B, 0x00, 0x65, 0x00)
     private const val HEADER_PAGE = 4

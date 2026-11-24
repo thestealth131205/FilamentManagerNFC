@@ -83,7 +83,7 @@
     <string name="nfc_error_communication">Fehler bei der Tag-Kommunikation: %1$s</string>
     <string name="nfc_error_same_chip">Das ist derselbe Chip wie beim vorherigen Schreibvorgang (UID %1$s). Für den zweiten Chip einen anderen, physisch getrennten Tag auflegen.</string>
     <string name="nfc_error_verify_failed">Schreiben unvollständig – Lesevergleich stimmt nicht überein. Tag erneut auflegen und wiederholen.</string>
-    <string name="nfc_warning_cc_mismatch">Unerwarteter Capability-Container (Page 3): %1$s statt %2$s – vermutlich kein NTAG215 oder der Tag ist beschädigt.</string>
+    <string name="nfc_warning_cc_mismatch">Unerwarteter Capability-Container (Page 3): %1$s – erwartet wird einer von %2$s. Vermutlich kein NTAG213/215/216 oder der Tag ist beschädigt.</string>
 
     <string name="nfc_tools_menu">Tools</string>
     <string name="nfc_tools_dialog_title">Tools</string>
@@ -116,6 +116,7 @@
     <string name="nfc_tool_error_url_too_long">URL ist zu lang für den Tag (max. %1$s Zeichen).</string>
     <string name="nfc_tool_error_locked_or_auth">Nicht möglich – der Tag ist noch gesperrt. Zuerst mit dem aktuellen Passwort entsperren.</string>
     <string name="nfc_tool_error_wrong_password">Falsches Passwort für diesen Tag.</string>
+    <string name="nfc_tool_error_unknown_tag_type">Tag-Typ nicht erkannt – die Passwort-Funktionen gehen nur mit NTAG213, NTAG215 und NTAG216.</string>
 
     <string name="scan_title">Etikett scannen</string>
     <string name="scan_permission_missing">Für den Kamera-Scan wird die Kamera-Berechtigung benötigt.</string>

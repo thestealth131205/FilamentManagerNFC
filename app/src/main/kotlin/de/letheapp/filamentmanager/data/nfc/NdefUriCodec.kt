@@ -13,32 +13,24 @@ object NdefUriCodec {
     private const val NDEF_TLV_TYPE: Byte = 0x03
     private const val TERMINATOR_TLV: Byte = 0xFE.toByte()
 
-    /** Verfügbarer Platz: dieselben 144 Byte (Pages 4–39), die auch für das ACE-Format als sicher garantiert gelten. */
-    private const val MAX_BYTES = AceTagCodec.TOTAL_BYTES
+    /** Ab dieser Länge braucht das TLV das 3-Byte-Längenformat (0xFF + 2 Byte Big Endian). */
+    private const val TLV_SHORT_MAX = 0xFE
+
+    /** Ab dieser Payload-Länge entfällt das SR-Flag, Payload-Length wird 4 Byte lang. */
+    private const val SHORT_RECORD_MAX = 0xFF
 
     class UrlTooLongException(val maxUrlLength: Int) : Exception()
 
-    /** Baut die zu schreibenden Pages auf (Page-Nummer -> genau 4 Byte), analog zu [AceTagCodec.encode]. */
-    fun encodeUrlMessage(url: String): Map<Int, ByteArray> {
+    /**
+     * Baut die zu schreibenden Pages auf (Page-Nummer -> genau 4 Byte), analog zu [AceTagCodec.encode].
+     * [capacityBytes] = User-Memory des erkannten Chips ([NtagType.userBytes]: 144/496/872 Byte),
+     * bei unbekanntem Typ die sichere Untergrenze [AceTagCodec.TOTAL_BYTES].
+     */
+    fun encodeUrlMessage(url: String, capacityBytes: Int = AceTagCodec.TOTAL_BYTES): Map<Int, ByteArray> {
         val urlBytes = url.toByteArray(Charsets.UTF_8)
-        // Record-Header (1) + Type-Length (1) + Payload-Length (1) + Type 'U' (1) + URI-Identifier (1)
-        val recordOverhead = 5
-        val recordBytes = recordOverhead + urlBytes.size
-        // TLV-Header (Type+Length, 2 Byte) + Record + Terminator-TLV (1 Byte)
-        val totalBytes = 2 + recordBytes + 1
-        val maxUrlBytes = MAX_BYTES - 2 - recordOverhead - 1
-        if (totalBytes > MAX_BYTES) throw UrlTooLongException(maxUrlBytes)
+        val tlv = buildTlv(urlBytes)
+        if (tlv.size > capacityBytes) throw UrlTooLongException(maxUrlBytes(capacityBytes))
 
-        val payloadLength = 1 + urlBytes.size
-        val record = byteArrayOf(
-            0xD1.toByte(), // MB|ME|SR|TNF=well-known (einzelnes, kurzes Record)
-            0x01, // Type Length: 1 Byte ('U')
-            payloadLength.toByte(),
-            0x55, // Type: 'U' (URI Record)
-            URI_IDENTIFIER_NONE,
-        ) + urlBytes
-
-        val tlv = byteArrayOf(NDEF_TLV_TYPE, record.size.toByte()) + record + byteArrayOf(TERMINATOR_TLV)
         val padded = ByteArray(((tlv.size + 3) / 4) * 4)
         System.arraycopy(tlv, 0, padded, 0, tlv.size)
 
@@ -47,5 +39,44 @@ object NdefUriCodec {
             pages[AceTagCodec.FIRST_PAGE + i / 4] = padded.copyOfRange(i, i + 4)
         }
         return pages
+    }
+
+    private fun buildTlv(urlBytes: ByteArray): ByteArray {
+        val payloadLength = 1 + urlBytes.size
+        val shortRecord = payloadLength <= SHORT_RECORD_MAX
+        val header = if (shortRecord) {
+            byteArrayOf(
+                0xD1.toByte(), // MB|ME|SR|TNF=well-known (einzelnes, kurzes Record)
+                0x01, // Type Length: 1 Byte ('U')
+                payloadLength.toByte(),
+            )
+        } else {
+            byteArrayOf(
+                0xC1.toByte(), // MB|ME|TNF=well-known, ohne SR -> 4-Byte-Payload-Length
+                0x01,
+                (payloadLength ushr 24).toByte(),
+                (payloadLength ushr 16).toByte(),
+                (payloadLength ushr 8).toByte(),
+                payloadLength.toByte(),
+            )
+        }
+        val record = header + byteArrayOf(
+            0x55, // Type: 'U' (URI Record)
+            URI_IDENTIFIER_NONE,
+        ) + urlBytes
+
+        val tlvLength = if (record.size <= TLV_SHORT_MAX) {
+            byteArrayOf(record.size.toByte())
+        } else {
+            byteArrayOf(0xFF.toByte(), (record.size ushr 8).toByte(), record.size.toByte())
+        }
+        return byteArrayOf(NDEF_TLV_TYPE) + tlvLength + record + byteArrayOf(TERMINATOR_TLV)
+    }
+
+    /** Größte URL-Länge in Byte, deren TLV noch in [capacityBytes] passt (Overhead hängt von der Länge ab). */
+    private fun maxUrlBytes(capacityBytes: Int): Int {
+        var length = capacityBytes
+        while (length > 0 && buildTlv(ByteArray(length)).size > capacityBytes) length--
+        return length
     }
 }

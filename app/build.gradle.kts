@@ -13,8 +13,8 @@ android {
         applicationId = "de.letheapp.filamentmanager"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.2.7"
+        versionCode = 10
+        versionName = "0.2.8"
     }
 
     signingConfigs {
